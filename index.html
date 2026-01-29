@@ -2,15 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Drift: RESTORED</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Drift: CROSS-PLATFORM</title>
     <style>
-        body { margin: 0; background: #010103; color: #0ff; font-family: 'Consolas', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        canvas { border: 4px solid #f00; background: #000; cursor: crosshair; }
+        body { margin: 0; background: #010103; color: #0ff; font-family: 'Consolas', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; touch-action: none; }
+        canvas { border: 4px solid #f00; background: #000; cursor: crosshair; max-width: 100vw; max-height: 100vh; }
         
         .overlay { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 500; backdrop-filter: blur(10px); }
-        .btn { background: #000; border: 2px solid #0ff; color: #0ff; cursor: pointer; padding: 12px 30px; font-family: inherit; font-size: 1.2rem; transition: 0.2s; margin-top: 15px; text-transform: uppercase; outline: none; }
+        .btn { background: #000; border: 2px solid #0ff; color: #0ff; cursor: pointer; padding: 15px 40px; font-family: inherit; font-size: 1.2rem; transition: 0.2s; margin-top: 15px; text-transform: uppercase; outline: none; }
         .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 25px #0ff; }
+
+        /* Platform Switcher */
+        .platform-toggle { display: flex; gap: 10px; margin: 20px 0; }
+        .p-btn { padding: 10px 20px; border: 1px solid #555; background: #111; color: #888; cursor: pointer; font-family: inherit; }
+        .p-btn.active { border-color: #0f0; color: #0f0; background: #002200; box-shadow: 0 0 10px #0f0; }
 
         .sidebar { position: absolute; top: 0; width: 320px; height: 100%; background: rgba(5, 5, 15, 0.98); padding: 25px; transition: 0.4s ease-out; z-index: 1000; overflow-y: auto; box-sizing: border-box; display:none; border: 1px solid #333; }
         #shop { left: 0; border-right: 3px solid #ff0; }
@@ -18,13 +23,22 @@
         #leaderboard { right: 0; border-left: 3px solid #0ff; }
         
         .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .shop-item { background: #111; border: 1px solid #333; padding: 10px; cursor: pointer; text-align: center; font-size: 0.7rem; transition: 0.2s; }
+        .shop-item { background: #111; border: 1px solid #333; padding: 12px; cursor: pointer; text-align: center; font-size: 0.75rem; transition: 0.2s; }
         .shop-item.active-item { background: #003333; border-color: #0ff; box-shadow: inset 0 0 10px #0ff; }
 
-        .nav-group { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 1100; }
-        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 8px 15px; cursor: pointer; font-family: inherit; font-size: 0.7rem; }
+        .nav-group { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 1100; }
+        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 10px 12px; cursor: pointer; font-family: inherit; font-size: 0.7rem; }
         
-        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 100; }
+        #ui { position: absolute; top: 15px; left: 15px; pointer-events: none; z-index: 100; }
+        
+        /* Mobile Tactical Button */
+        #mobileWeaponBtn { 
+            position: absolute; bottom: 30px; right: 30px; width: 100px; height: 100px; 
+            border-radius: 50%; border: 4px solid #0f0; background: rgba(0,255,0,0.1); 
+            color: #0f0; font-weight: bold; display: none; align-items: center; justify-content: center; 
+            z-index: 1200; pointer-events: auto; text-align: center; font-size: 0.8rem;
+        }
+
         #itemPrompt { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); text-align: center; display:none; }
         .cd-bar { width: 180px; height: 8px; background: #222; border: 1px solid #0f0; margin-top: 5px; overflow: hidden; }
         #cdFill { width: 100%; height: 100%; background: #0f0; }
@@ -37,24 +51,30 @@
     <div id="itemPrompt">
         <div id="curItemText" style="color:#0f0; font-weight:bold; font-size: 0.9rem;">READY</div>
         <div class="cd-bar"><div id="cdFill"></div></div>
-        <small style="color:#888; font-size: 0.6rem;">PRESS [E] TO ACTIVATE</small>
     </div>
+
+    <div id="mobileWeaponBtn" onclick="fireWeapon()">ACTIVATE</div>
 
     <div id="startScreen" class="overlay">
         <h1 style="font-size: 3rem; color:#0ff; margin:0;">NEON DRIFT</h1>
-        <p style="color:#f0f; font-size: 0.7rem; letter-spacing: 2px;">PILOT ID: <span id="displayNick"></span></p>
-        <button class="btn" onclick="initGame()">INITIATE DRIVE</button>
+        <p style="color:#f0f; font-size: 0.7rem;">ID: <span id="displayNick"></span></p>
+        
+        <div class="platform-toggle">
+            <button id="pcMode" class="p-btn active" onclick="setPlatform('pc')">DESKTOP</button>
+            <button id="mobileMode" class="p-btn" onclick="setPlatform('mobile')">MOBILE</button>
+        </div>
+
+        <button class="btn" onclick="initGame()">INITIATE</button>
     </div>
 
     <div id="deathScreen" class="overlay" style="display:none">
         <h1 style="color:#f0f;">CORE RUPTURE</h1>
-        <p>SCORE: <span id="finalScore">0</span></p>
         <button class="btn" onclick="resetGame()">RE-START</button>
     </div>
 
     <div class="nav-group">
         <button class="nav-btn" onclick="toggleMenu('shop')">GEAR</button>
-        <button class="nav-btn" onclick="toggleMenu('itemStore')" style="border-color:#0f0; color:#0f0;">WEAPON</button>
+        <button class="nav-btn" onclick="toggleMenu('itemStore')">WEAPON</button>
         <button class="nav-btn" onclick="toggleMenu('leaderboard')">RANKS</button>
     </div>
     
@@ -64,22 +84,21 @@
     </div>
 
     <div id="shop" class="sidebar">
-        <h2 style="color:#ff0; text-align:center; font-size: 1.2rem;">PASSIVE UPGRADES</h2>
+        <h2 style="color:#ff0; text-align:center;">PASSIVES</h2>
         <div id="shopGrid" class="shop-grid"></div>
     </div>
 
     <div id="itemStore" class="sidebar">
-        <h2 style="color:#0f0; text-align:center; font-size: 1.2rem;">ACTIVE WEAPONS</h2>
-        <p style="font-size:0.6rem; text-align:center; color:#888;">PERMANENT UNLOCK - 15s CD</p>
+        <h2 style="color:#0f0; text-align:center;">WEAPONS</h2>
         <div id="itemGrid" class="shop-grid"></div>
     </div>
 
     <div id="leaderboard" class="sidebar">
-        <h2 style="color:#0ff; text-align:center; font-size: 1.2rem;">LEADERBOARD</h2>
-        <div id="lbContent" style="font-size: 0.8rem; color: #fff;"></div>
+        <h2 style="color:#0ff; text-align:center;">LEADERBOARD</h2>
+        <div id="lbContent"></div>
     </div>
 
-    <div id="console"><input type="text" id="consoleInput" placeholder="ROOT_"></div>
+    <div id="console"><input type="text" id="consoleInput" placeholder="CMD_"></div>
 
     <canvas id="gameCanvas"></canvas>
 
@@ -88,7 +107,6 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
-        // --- DATA PERSISTENCE ---
         if (!localStorage.getItem('driftNick')) {
             localStorage.setItem('driftNick', "PILOT-" + Math.floor(1000 + Math.random() * 9000));
         }
@@ -96,6 +114,7 @@
         let score = 0, up = parseInt(localStorage.getItem('driftUP')) || 0;
         let pilotNick = localStorage.getItem('driftNick');
         let gameActive = false, hue = 0, lastWeaponUse = 0;
+        let isMobile = false;
         const COOLDOWN_MS = 15000;
 
         document.getElementById('displayNick').innerText = pilotNick;
@@ -118,12 +137,18 @@
             { id: 'gold', name: 'Wealth', cost: 12000, desc: 'Spawn Gold' }
         ];
 
+        function setPlatform(type) {
+            isMobile = (type === 'mobile');
+            document.getElementById('pcMode').classList.toggle('active', !isMobile);
+            document.getElementById('mobileMode').classList.toggle('active', isMobile);
+            // Easier movement for mobile
+            player.speed = isMobile ? 0.22 : 0.12; 
+        }
+
         function initGame() {
             document.getElementById('startScreen').style.display = 'none';
+            if(isMobile) document.getElementById('mobileWeaponBtn').style.display = 'flex';
             gameActive = true;
-            // Force reset positions to prevent invisible ball
-            player.x = 450; player.y = 300;
-            player.tx = 450; player.ty = 300;
             loop();
         }
 
@@ -132,7 +157,17 @@
             const isClosing = el.style.display === 'block';
             document.querySelectorAll('.sidebar').forEach(s => s.style.display = 'none');
             el.style.display = isClosing ? 'none' : 'block';
-            if (id === 'leaderboard') updateLB();
+        }
+
+        function fireWeapon() {
+            if (!gameActive || !weaponEquipped) return;
+            const now = Date.now();
+            if (now - lastWeaponUse >= COOLDOWN_MS) {
+                if (weaponEquipped === 'nuke') enemies = [];
+                if (weaponEquipped === 'emp') { enemies.forEach(en => en.v = 0); setTimeout(()=>enemies.forEach(en=>en.v=3), 4000); }
+                if (weaponEquipped === 'gold') { for(let i=0; i<15; i++) points.push({x: Math.random()*800+50, y: Math.random()*500+50}); }
+                lastWeaponUse = now;
+            }
         }
 
         function buyPassive(id, cost) {
@@ -156,45 +191,46 @@
             localStorage.setItem('driftOwned', JSON.stringify(ownedItems));
             localStorage.setItem('driftPassives', JSON.stringify(activePassives));
             localStorage.setItem('driftWeapon', weaponEquipped || "");
-            document.getElementById('upCount').innerText = up;
         }
 
         function updateShops() {
             document.getElementById('upCount').innerText = up;
             document.getElementById('shopGrid').innerHTML = passives.map(p => `
                 <div class="shop-item ${activePassives.includes(p.id)?'active-item':''} ${ownedItems.includes(p.id)?'owned':''}" onclick="buyPassive('${p.id}', ${p.cost})">
-                    ${p.name}<br><small>${p.desc}</small><br>${ownedItems.includes(p.id)?'USE':p.cost}
+                    ${p.name}<br>${ownedItems.includes(p.id)?'USE':p.cost}
                 </div>`).join('');
             document.getElementById('itemGrid').innerHTML = weapons.map(w => `
                 <div class="shop-item ${weaponEquipped === w.id?'active-item':''} ${ownedItems.includes(w.id)?'owned':''}" onclick="buyWeapon('${w.id}', ${w.cost})">
-                    ${w.name}<br><small>${w.desc}</small><br>${ownedItems.includes(w.id)?'EQUIP':w.cost}
+                    ${w.name}<br>${ownedItems.includes(w.id)?'EQUIP':w.cost}
                 </div>`).join('');
         }
 
-        function updateLB() {
-            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
-            document.getElementById('lbContent').innerHTML = lb.map((entry, i) => 
-                `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>#${i+1} ${entry.name}</span><span>${entry.score}</span></div>`
-            ).join('');
-        }
-
-        // --- INPUT HANDLING ---
+        // --- CONTROLS ---
         window.addEventListener('keydown', e => {
-            if (e.key.toLowerCase() === 'e' && gameActive && weaponEquipped) {
-                const now = Date.now();
-                if (now - lastWeaponUse >= COOLDOWN_MS) {
-                    if (weaponEquipped === 'nuke') enemies = [];
-                    if (weaponEquipped === 'emp') { enemies.forEach(en => en.v = 0); setTimeout(()=>enemies.forEach(en=>en.v=3), 4000); }
-                    if (weaponEquipped === 'gold') { for(let i=0; i<15; i++) points.push({x: Math.random()*800+50, y: Math.random()*500+50}); }
-                    lastWeaponUse = now;
-                }
-            }
+            if (e.key.toLowerCase() === 'e') fireWeapon();
             if (e.key === '`') {
                 const c = document.getElementById('console');
                 c.style.display = c.style.display === 'block' ? 'none' : 'block';
                 if(c.style.display === 'block') document.getElementById('consoleInput').focus();
             }
         });
+
+        // PC Movement
+        window.addEventListener('mousemove', e => {
+            if (isMobile) return;
+            const r = canvas.getBoundingClientRect();
+            player.tx = e.clientX - r.left; player.ty = e.clientY - r.top;
+        });
+
+        // Mobile Touch Movement
+        window.addEventListener('touchmove', e => {
+            if (!isMobile) return;
+            e.preventDefault();
+            const r = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            player.tx = touch.clientX - r.left;
+            player.ty = touch.clientY - r.top;
+        }, { passive: false });
 
         document.getElementById('consoleInput').addEventListener('keydown', e => {
             if(e.key === 'Enter') {
@@ -203,34 +239,25 @@
             }
         });
 
-        window.addEventListener('mousemove', e => {
-            const r = canvas.getBoundingClientRect();
-            player.tx = e.clientX - r.left; player.ty = e.clientY - r.top;
-        });
-
         function endGame() {
             gameActive = false;
-            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
-            lb.push({name: pilotNick, score: score});
-            lb.sort((a,b) => b.score - a.score);
-            localStorage.setItem('driftLB', JSON.stringify(lb.slice(0,10)));
             document.getElementById('finalScore').innerText = score;
             document.getElementById('deathScreen').style.display = 'flex';
+            document.getElementById('mobileWeaponBtn').style.display = 'none';
         }
 
         function resetGame() {
             score = 0; enemies = []; points = []; gameActive = true;
             player.x = 450; player.y = 300; player.tx = 450; player.ty = 300;
             document.getElementById('deathScreen').style.display = 'none';
+            if(isMobile) document.getElementById('mobileWeaponBtn').style.display = 'flex';
             loop();
         }
 
-        // --- MAIN GAME LOOP ---
         function loop() {
             if (!gameActive) return;
             hue++;
-            ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
-            ctx.fillRect(0,0,900,600);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0,0,900,600);
 
             // UI Cooldown
             const now = Date.now();
@@ -238,24 +265,24 @@
             const per = Math.min(elapsed / COOLDOWN_MS, 1);
             document.getElementById('itemPrompt').style.display = weaponEquipped ? 'block' : 'none';
             document.getElementById('cdFill').style.width = (per * 100) + "%";
-            document.getElementById('curItemText').innerText = per >= 1 ? "READY: " + weaponEquipped.toUpperCase() : "CHARGING...";
-            document.getElementById('cdFill').style.background = per >= 1 ? "#0f0" : "#f00";
+            document.getElementById('curItemText').innerText = per >= 1 ? weaponEquipped.toUpperCase() : "CHARGING";
+            
+            if(isMobile) {
+                document.getElementById('mobileWeaponBtn').style.borderColor = per >= 1 ? "#0f0" : "#555";
+                document.getElementById('mobileWeaponBtn').style.color = per >= 1 ? "#0f0" : "#555";
+            }
 
-            // Player Movement
             player.x += (player.tx - player.x) * player.speed;
             player.y += (player.ty - player.y) * player.speed;
 
-            // Boundaries
             if (player.x < 5 || player.x > 895 || player.y < 5 || player.y > 595) endGame();
 
-            // Passive: Drone
             if (activePassives.includes('drone')) {
                 let dx = player.x + Math.cos(hue/10) * 60, dy = player.y + Math.sin(hue/10) * 60;
                 ctx.fillStyle = '#0f0'; ctx.fillRect(dx-4, dy-4, 8, 8);
                 enemies.forEach((en, i) => { if(Math.hypot(dx-en.x, dy-en.y) < 35) { enemies.splice(i,1); score += 50; } });
             }
 
-            // Draw Player & Trail
             player.trail.push({x: player.x, y: player.y});
             if (player.trail.length > 20) player.trail.shift();
             player.trail.forEach((t, i) => {
@@ -264,23 +291,17 @@
             });
             ctx.globalAlpha = 1;
 
-            // Enemies (Blocks)
             if (Math.random() < 0.08) enemies.push({x: Math.random()*860+20, y: -20, v: 3+(score/1200)});
             enemies.forEach((en, i) => {
                 en.y += en.v;
-                // Passive: Shield
                 if (activePassives.includes('shield') && Math.hypot(player.x-en.x, player.y-en.y) < 75) en.y -= 6;
-                // Collision
                 if (Math.hypot(player.x-en.x, player.y-en.y) < 18) endGame();
-                // Cleanup & Score
                 if (en.y > 620) { enemies.splice(i,1); score += 10; document.getElementById('scoreDisplay').innerText = "SCORE: " + score; }
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-8, en.y-8, 16, 16);
             });
 
-            // Points (Coins)
             if (Math.random() < 0.02) points.push({x: Math.random()*850+25, y: Math.random()*550+25});
             points.forEach((p, i) => {
-                // Passive: Magnet
                 if (activePassives.includes('magnet') && Math.hypot(player.x-p.x, player.y-p.y) < 160) {
                     p.x += (player.x - p.x) * 0.12; p.y += (player.y - p.y) * 0.12;
                 }
