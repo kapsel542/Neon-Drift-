@@ -3,264 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: MOBILE FIX</title>
+    <title>Neon Drift: FINAL MOBILE FIX</title>
     <style>
-        body { margin: 0; background: #010103; color: #0ff; font-family: 'Consolas', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; touch-action: none; }
-        canvas { border: 2px solid #f00; background: #000; cursor: crosshair; max-width: 100vw; max-height: 80vh; object-fit: contain; }
+        * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
+        body { margin: 0; background: #010103; color: #0ff; font-family: 'Consolas', monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        .overlay { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 500; backdrop-filter: blur(10px); }
-        .btn { background: #000; border: 2px solid #0ff; color: #0ff; cursor: pointer; padding: 15px 40px; font-family: inherit; font-size: 1.2rem; transition: 0.2s; margin-top: 15px; text-transform: uppercase; outline: none; }
+        canvas { border: 2px solid #f00; background: #000; width: 95vw; height: auto; max-height: 70vh; aspect-ratio: 9/6; }
+        
+        .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 2000; backdrop-filter: blur(8px); }
+        .btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 15px 40px; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; margin-top: 15px; }
 
-        .platform-toggle { display: flex; gap: 10px; margin: 20px 0; }
-        .p-btn { padding: 10px 20px; border: 1px solid #555; background: #111; color: #888; cursor: pointer; font-family: inherit; }
+        .platform-toggle { display: flex; gap: 10px; margin: 15px 0; }
+        .p-btn { padding: 10px 20px; border: 1px solid #444; background: #111; color: #666; font-family: inherit; }
         .p-btn.active { border-color: #0f0; color: #0f0; background: #002200; box-shadow: 0 0 10px #0f0; }
 
         /* HUD */
-        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; z-index: 100; font-size: 0.9rem; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 100; pointer-events: none; }
         .nav-group { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 1100; }
-        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 8px; cursor: pointer; font-family: inherit; font-size: 0.6rem; }
+        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 6px 10px; font-size: 0.7rem; }
 
         /* Mobile Controls */
-        #joystick-zone { 
-            position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; 
-            background: rgba(255,255,255,0.05); border: 2px solid rgba(0,255,255,0.2); border-radius: 50%; 
-            display: none; z-index: 1200; touch-action: none;
-        }
-        #joystick-stick {
-            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
-            background: #0ff; border-radius: 50%; transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px #0ff; pointer-events: none;
-        }
-        #mobileWeaponBtn { 
-            position: absolute; bottom: 30px; right: 30px; width: 90px; height: 90px; 
-            border-radius: 50%; border: 4px solid #0f0; background: rgba(0,255,0,0.1); 
-            color: #0f0; font-weight: bold; display: none; align-items: center; justify-content: center; 
-            z-index: 1200; font-size: 0.7rem; text-align: center;
-        }
+        #mobile-controls { position: absolute; bottom: 20px; width: 100%; display: none; justify-content: space-between; padding: 0 30px; align-items: center; z-index: 1500; }
+        #joy-zone { width: 130px; height: 130px; background: rgba(0,255,255,0.1); border: 2px solid #0ff; border-radius: 50%; position: relative; }
+        #joy-stick { width: 50px; height: 50px; background: #0ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #0ff; }
+        #act-btn { width: 90px; height: 90px; background: rgba(0,255,0,0.1); border: 4px solid #0f0; border-radius: 50%; color: #0f0; font-weight: bold; display: flex; align-items: center; justify-content: center; }
 
-        .sidebar { position: absolute; top: 0; width: 280px; height: 100%; background: rgba(5, 5, 15, 0.98); padding: 20px; transition: 0.4s; z-index: 1000; overflow-y: auto; display:none; border: 1px solid #333; }
+        .sidebar { position: absolute; top: 0; width: 280px; height: 100%; background: #05050f; padding: 20px; z-index: 1600; display:none; border: 1px solid #333; overflow-y: auto; }
         #shop { left: 0; border-right: 3px solid #ff0; }
         #itemStore { left: 0; border-right: 3px solid #0f0; } 
-        #leaderboard { right: 0; border-left: 3px solid #0ff; }
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .shop-item { background: #111; border: 1px solid #333; padding: 8px; cursor: pointer; text-align: center; font-size: 0.65rem; }
-        .shop-item.active-item { border-color: #0ff; background: #002222; }
-
-        #itemPrompt { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); text-align: center; display:none; }
-        .cd-bar { width: 120px; height: 6px; background: #222; border: 1px solid #0f0; margin-top: 4px; }
-        #cdFill { width: 100%; height: 100%; background: #0f0; }
     </style>
 </head>
 <body>
-    <div id="itemPrompt">
-        <div id="curItemText" style="color:#0f0; font-weight:bold; font-size: 0.7rem;">READY</div>
-        <div class="cd-bar"><div id="cdFill"></div></div>
-    </div>
-
-    <div id="joystick-zone"><div id="joystick-stick"></div></div>
-    <div id="mobileWeaponBtn" onclick="fireWeapon()">ACTIVATE</div>
-
-    <div id="startScreen" class="overlay">
-        <h1 style="font-size: 2.5rem; color:#0ff; margin:0;">NEON DRIFT</h1>
-        <div class="platform-toggle">
-            <button id="pcMode" class="p-btn active" onclick="setPlatform('pc')">PC</button>
-            <button id="mobileMode" class="p-btn" onclick="setPlatform('mobile')">MOBILE</button>
-        </div>
-        <button class="btn" onclick="initGame()">INITIATE</button>
-    </div>
-
-    <div id="deathScreen" class="overlay" style="display:none">
-        <h1 style="color:#f0f;">CORE RUPTURE</h1>
-        <button class="btn" onclick="resetGame()">RE-START</button>
+    <div id="ui">
+        <div>SCORE: <span id="sc">0</span></div>
+        <div style="color:#ff0">UP: <span id="upc">0</span></div>
     </div>
 
     <div class="nav-group">
-        <button class="nav-btn" onclick="toggleMenu('shop')">GEAR</button>
-        <button class="nav-btn" onclick="toggleMenu('itemStore')">WEAPON</button>
-        <button class="nav-btn" onclick="toggleMenu('leaderboard')">RANKS</button>
-    </div>
-    
-    <div id="ui">
-        <div>SCORE: <span id="scoreVal">0</span></div>
-        <div style="color:#ff0">UP: <span id="upCount">0</span></div>
+        <button class="nav-btn" onclick="openMenu('shop')">GEAR</button>
+        <button class="nav-btn" onclick="openMenu('itemStore')">WEAPON</button>
     </div>
 
-    <div id="shop" class="sidebar"><div id="shopGrid" class="shop-grid"></div></div>
-    <div id="itemStore" class="sidebar"><div id="itemGrid" class="shop-grid"></div></div>
-    <div id="leaderboard" class="sidebar"><div id="lbContent"></div></div>
+    <div id="mobile-controls">
+        <div id="joy-zone"><div id="joy-stick"></div></div>
+        <div id="act-btn" onclick="triggerWeapon()">FIRE</div>
+    </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="startScreen" class="overlay">
+        <h1 style="color:#0ff; margin:0;">NEON DRIFT</h1>
+        <div class="platform-toggle">
+            <button id="pcB" class="p-btn active" onclick="setMode('pc')">PC</button>
+            <button id="mobB" class="p-btn" onclick="setMode('mobile')">PHONE</button>
+        </div>
+        <button class="btn" onclick="startGame()">INITIATE</button>
+    </div>
+
+    <div id="shop" class="sidebar"><h3>PASSIVES</h3><div id="sg" style="display:grid; grid-template-columns:1fr 1fr; gap:5px;"></div></div>
+    <div id="itemStore" class="sidebar"><h3>WEAPONS</h3><div id="wg" style="display:grid; grid-template-columns:1fr 1fr; gap:5px;"></div></div>
+
+    <canvas id="c"></canvas>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
         let score = 0, up = parseInt(localStorage.getItem('driftUP')) || 0;
-        let gameActive = false, hue = 0, lastWeaponUse = 0, isMobile = false;
-        const COOLDOWN_MS = 15000;
+        let active = false, isMobile = false, lastWep = 0;
+        let player = { x: 450, y: 300, tx: 450, ty: 300, trail: [] };
+        let owned = JSON.parse(localStorage.getItem('driftOwned')) || ['default'];
+        let passives = JSON.parse(localStorage.getItem('driftPassives')) || [];
+        let curWep = localStorage.getItem('driftWeapon') || null;
+        let enemies = [], coins = [];
 
-        const player = { x: 450, y: 300, size: 12, tx: 450, ty: 300, trail: [], speed: 0.12 };
-        let activePassives = JSON.parse(localStorage.getItem('driftPassives')) || [];
-        let ownedItems = JSON.parse(localStorage.getItem('driftOwned')) || ['default'];
-        let weaponEquipped = localStorage.getItem('driftWeapon') || null;
-        let enemies = [], points = [];
-
-        function setPlatform(type) {
-            isMobile = (type === 'mobile');
-            document.getElementById('pcMode').classList.toggle('active', !isMobile);
-            document.getElementById('mobileMode').classList.toggle('active', isMobile);
+        function setMode(m) {
+            isMobile = (m === 'mobile');
+            document.getElementById('pcB').classList.toggle('active', !isMobile);
+            document.getElementById('mobB').classList.toggle('active', isMobile);
         }
 
-        function initGame() {
+        function startGame() {
             document.getElementById('startScreen').style.display = 'none';
-            if(isMobile) {
-                document.getElementById('joystick-zone').style.display = 'block';
-                document.getElementById('mobileWeaponBtn').style.display = 'flex';
-                player.speed = 0.2; // Faster snap for mobile
-            }
-            gameActive = true; loop();
+            if(isMobile) document.getElementById('mobile-controls').style.display = 'flex';
+            player.x = 450; player.y = 300; player.tx = 450; player.ty = 300;
+            active = true;
+            loop();
         }
 
-        function toggleMenu(id) {
+        // --- THE JOYSTICK ENGINE ---
+        const stick = document.getElementById('joy-stick');
+        const zone = document.getElementById('joy-zone');
+        let jHeld = false;
+
+        zone.addEventListener('touchstart', (e) => { jHeld = true; updateJoy(e); });
+        window.addEventListener('touchmove', (e) => { if(jHeld) updateJoy(e); }, { passive: false });
+        window.addEventListener('touchend', () => { 
+            jHeld = false; 
+            stick.style.left = '50%'; stick.style.top = '50%';
+        });
+
+        function updateJoy(e) {
+            e.preventDefault();
+            const r = zone.getBoundingClientRect();
+            const t = e.touches[0];
+            const cx = r.left + r.width/2;
+            const cy = r.top + r.height/2;
+            let dx = t.clientX - cx;
+            let dy = t.clientY - cy;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            const max = r.width/2;
+
+            if(d > max) { dx *= max/d; dy *= max/d; }
+            stick.style.left = `calc(50% + ${dx}px)`;
+            stick.style.top = `calc(50% + ${dy}px)`;
+
+            // Movement Sensitivity
+            player.tx = player.x + (dx * 1.5);
+            player.ty = player.y + (dy * 1.5);
+        }
+
+        // PC Mouse
+        window.addEventListener('mousemove', (e) => {
+            if(isMobile) return;
+            const r = canvas.getBoundingClientRect();
+            player.tx = (e.clientX - r.left) * (900 / r.width);
+            player.ty = (e.clientY - r.top) * (600 / r.height);
+        });
+
+        function triggerWeapon() {
+            if(!active || !curWep || Date.now() - lastWep < 15000) return;
+            if(curWep === 'nuke') enemies = [];
+            if(curWep === 'gold') for(let i=0; i<10; i++) coins.push({x:Math.random()*800, y:Math.random()*500});
+            lastWep = Date.now();
+        }
+
+        function openMenu(id) {
             const el = document.getElementById(id);
-            const isOpen = el.style.display === 'block';
-            document.querySelectorAll('.sidebar').forEach(s => s.style.display = 'none');
-            el.style.display = isOpen ? 'none' : 'block';
+            const showing = el.style.display === 'block';
+            document.querySelectorAll('.sidebar').forEach(s => s.style.display='none');
+            el.style.display = showing ? 'none' : 'block';
+            updateShopUI();
         }
 
-        // --- COORDINATE FIX ---
-        function getCanvasCoords(e) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
+        function updateShopUI() {
+            document.getElementById('upc').innerText = up;
+            const pList = [{id:'drone', n:'Drone'}, {id:'magnet', n:'Magnet'}, {id:'shield', n:'Shield'}];
+            document.getElementById('sg').innerHTML = pList.map(p => `
+                <div style="background:#222; padding:10px; border:1px solid ${passives.includes(p.id)?'#0ff':'#444'}" onclick="buyP('${p.id}')">
+                    ${p.n}<br>${passives.includes(p.id)?'ON':'5K'}
+                </div>`).join('');
+            const wList = [{id:'nuke', n:'Nuke'}, {id:'gold', n:'Wealth'}];
+            document.getElementById('wg').innerHTML = wList.map(w => `
+                <div style="background:#222; padding:10px; border:1px solid ${curWep===w.id?'#0f0':'#444'}" onclick="buyW('${w.id}')">
+                    ${w.n}<br>${owned.includes(w.id)?'OWNED':'10K'}
+                </div>`).join('');
         }
 
-        // --- JOYSTICK LOGIC ---
-        const jZone = document.getElementById('joystick-zone');
-        const jStick = document.getElementById('joystick-stick');
-        let jActive = false;
-
-        jZone.addEventListener('touchstart', () => jActive = true);
-        window.addEventListener('touchmove', (e) => {
-            if (!jActive || !isMobile) return;
-            const rect = jZone.getBoundingClientRect();
-            const touch = e.touches[0];
-            const centerX = rect.left + rect.width/2;
-            const centerY = rect.top + rect.height/2;
-            
-            let dx = touch.clientX - centerX;
-            let dy = touch.clientY - centerY;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const max = rect.width / 2;
-
-            if (dist > max) { dx *= max/dist; dy *= max/dist; }
-            
-            jStick.style.left = `calc(50% + ${dx}px)`;
-            jStick.style.top = `calc(50% + ${dy}px)`;
-
-            // Map joystick to ship destination
-            player.tx = player.x + (dx * 15);
-            player.ty = player.y + (dy * 15);
-        });
-        window.addEventListener('touchend', () => {
-            jActive = false;
-            jStick.style.left = '50%'; jStick.style.top = '50%';
-        });
-
-        // PC Movement
-        window.addEventListener('mousemove', e => {
-            if (isMobile) return;
-            const coords = getCanvasCoords(e);
-            player.tx = coords.x; player.ty = coords.y;
-        });
-
-        function fireWeapon() {
-            if (!gameActive || !weaponEquipped) return;
-            const now = Date.now();
-            if (now - lastWeaponUse >= COOLDOWN_MS) {
-                if (weaponEquipped === 'nuke') enemies = [];
-                if (weaponEquipped === 'emp') { enemies.forEach(en => en.v = 0); setTimeout(()=>enemies.forEach(en=>en.v=3), 4000); }
-                if (weaponEquipped === 'gold') { for(let i=0; i<15; i++) points.push({x: Math.random()*800+50, y: Math.random()*500+50}); }
-                lastWeaponUse = now;
-            }
+        function buyP(id) {
+            if(passives.includes(id)) passives = passives.filter(x=>x!==id);
+            else if(up >= 5000) { up -= 5000; passives.push(id); }
+            save(); updateShopUI();
         }
 
-        window.addEventListener('keydown', e => { if(e.key.toLowerCase()==='e') fireWeapon(); });
+        function buyW(id) {
+            if(owned.includes(id)) curWep = id;
+            else if(up >= 10000) { up -= 10000; owned.push(id); curWep = id; }
+            save(); updateShopUI();
+        }
 
         function save() {
             localStorage.setItem('driftUP', up);
-            localStorage.setItem('driftOwned', JSON.stringify(ownedItems));
-            localStorage.setItem('driftPassives', JSON.stringify(activePassives));
-            localStorage.setItem('driftWeapon', weaponEquipped || "");
+            localStorage.setItem('driftOwned', JSON.stringify(owned));
+            localStorage.setItem('driftPassives', JSON.stringify(passives));
+            localStorage.setItem('driftWeapon', curWep);
         }
 
         function loop() {
-            if (!gameActive) return;
-            hue++;
-            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0,0,900,600);
+            if(!active) return;
+            ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,900,600);
 
-            const elapsed = Date.now() - lastWeaponUse;
-            const per = Math.min(elapsed / COOLDOWN_MS, 1);
-            document.getElementById('itemPrompt').style.display = weaponEquipped ? 'block' : 'none';
-            document.getElementById('cdFill').style.width = (per * 100) + "%";
-            if(isMobile) document.getElementById('mobileWeaponBtn').style.opacity = per >= 1 ? "1" : "0.3";
-
-            player.x += (player.tx - player.x) * player.speed;
-            player.y += (player.ty - player.y) * player.speed;
+            // Movement
+            player.x += (player.tx - player.x) * (isMobile ? 0.15 : 0.1);
+            player.y += (player.ty - player.y) * (isMobile ? 0.15 : 0.1);
             player.x = Math.max(10, Math.min(890, player.x));
             player.y = Math.max(10, Math.min(590, player.y));
 
-            // Drone
-            if (activePassives.includes('drone')) {
-                let dx = player.x + Math.cos(hue/10)*70, dy = player.y + Math.sin(hue/10)*70;
-                ctx.fillStyle = '#0f0'; ctx.fillRect(dx-4, dy-4, 8, 8);
-                enemies.forEach((en, i) => { if(Math.hypot(dx-en.x, dy-en.y) < 40) enemies.splice(i,1); });
-            }
-
-            // Trail & Pilot
-            player.trail.push({x: player.x, y: player.y});
-            if (player.trail.length > 15) player.trail.shift();
+            // Trail
+            player.trail.push({x:player.x, y:player.y});
+            if(player.trail.length > 15) player.trail.shift();
             player.trail.forEach((t, i) => {
-                ctx.globalAlpha = i/15; ctx.fillStyle = '#0ff';
-                ctx.beginPath(); ctx.arc(t.x, t.y, player.size*(i/15), 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#0ff'; ctx.globalAlpha = i/15;
+                ctx.beginPath(); ctx.arc(t.x, t.y, 8*(i/15), 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
             // Enemies
-            if (Math.random() < 0.07) enemies.push({x: Math.random()*860+20, y: -20, v: 3+(score/1500)});
+            if(Math.random() < 0.07) enemies.push({x: Math.random()*880, y:-20, v:3+(score/2000)});
             enemies.forEach((en, i) => {
                 en.y += en.v;
-                if (activePassives.includes('shield') && Math.hypot(player.x-en.x, player.y-en.y) < 80) en.y -= 7;
-                if (Math.hypot(player.x-en.x, player.y-en.y) < 18) { gameActive = false; document.getElementById('deathScreen').style.display='flex'; }
-                if (en.y > 620) { enemies.splice(i,1); score += 10; document.getElementById('scoreVal').innerText = score; }
+                if(passives.includes('shield') && Math.hypot(player.x-en.x, player.y-en.y) < 70) en.y -= 5;
+                if(Math.hypot(player.x-en.x, player.y-en.y) < 18) { active = false; document.getElementById('startScreen').style.display='flex'; }
+                if(en.y > 620) { enemies.splice(i,1); score += 10; document.getElementById('sc').innerText = score; }
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-8, en.y-8, 16, 16);
             });
 
             // Coins
-            if (Math.random() < 0.02) points.push({x: Math.random()*850+25, y: Math.random()*550+25});
-            points.forEach((p, i) => {
-                if (activePassives.includes('magnet') && Math.hypot(player.x-p.x, player.y-p.y) < 150) {
-                    p.x += (player.x - p.x) * 0.15; p.y += (player.y - p.y) * 0.15;
+            if(Math.random() < 0.02) coins.push({x: Math.random()*850, y: Math.random()*550});
+            coins.forEach((cn, i) => {
+                if(passives.includes('magnet') && Math.hypot(player.x-cn.x, player.y-cn.y) < 150) {
+                    cn.x += (player.x-cn.x)*0.1; cn.y += (player.y-cn.y)*0.1;
                 }
-                if (Math.hypot(player.x-p.x, player.y-p.y) < 25) { points.splice(i,1); up += 100; save(); document.getElementById('upCount').innerText = up; }
-                ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI*2); ctx.fill();
+                if(Math.hypot(player.x-cn.x, player.y-cn.y) < 25) { coins.splice(i,1); up += 100; save(); document.getElementById('upc').innerText = up; }
+                ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 5, 0, Math.PI*2); ctx.fill();
             });
 
             requestAnimationFrame(loop);
-        }
-
-        function resetGame() {
-            score = 0; enemies = []; points = []; gameActive = true;
-            player.x = 450; player.y = 300; player.tx = 450; player.ty = 300;
-            document.getElementById('deathScreen').style.display = 'none';
-            loop();
         }
     </script>
 </body>
