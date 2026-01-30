@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: ASCENSION FIXED</title>
+    <title>Neon Drift: BALANCE & CHAOS</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
         body { margin: 0; background: #010105; color: #0ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -23,6 +23,16 @@
         .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
         .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; }
         input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
+
+        #console {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 20, 0, 0.9); border: 1px solid #0f0; padding: 10px;
+            display: none; z-index: 9999; box-shadow: 0 0 20px #0f0;
+        }
+        #console input {
+            background: #000; border: 1px solid #0f0; color: #0f0;
+            font-family: 'Courier New', monospace; padding: 5px; width: 200px; font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -45,6 +55,11 @@
         <button class="start-btn" onclick="startGame()">ENGAGE</button>
     </div>
 
+    <div id="console">
+        <span style="color:#0f0; font-size:12px;">SYS_LINK></span>
+        <input type="text" id="consoleInput" placeholder="CODE">
+    </div>
+
     <canvas id="c"></canvas>
 
     <script>
@@ -57,12 +72,41 @@
         };
 
         const skins = {'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f'};
-        const drones = {'scout': {n:'Scout', p:3000, r:150}, 'sniper': {n:'Sniper', p:10000, r:600}};
+        const drones = {'scout': {n:'Scout', p:3000, r:150}, 'sniper': {n:'Sniper', p:10000, r:300}}; // Nerfed Sniper Range
         const perks = {'magnet': {n:'Magnet', p:4000}, 'shield': {n:'Shield', p:6000}};
 
         let active = false, score = 0, enemies = [], coins = [], isEnding = false;
-        let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false };
-        let droneAngle = 0;
+        let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6 };
+        let droneAngle = 0, gravityMultiplier = 1, speedDivisor = 4000;
+
+        let f6Count = 0, f6Timer;
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'F6') {
+                e.preventDefault(); f6Count++;
+                clearTimeout(f6Timer);
+                f6Timer = setTimeout(() => { f6Count = 0; }, 500);
+                if (f6Count === 3) {
+                    const con = document.getElementById('console');
+                    con.style.display = con.style.display === 'block' ? 'none' : 'block';
+                    if(con.style.display === 'block') document.getElementById('consoleInput').focus();
+                    f6Count = 0;
+                }
+            }
+            if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
+                processCommand(document.getElementById('consoleInput').value.toUpperCase());
+                document.getElementById('consoleInput').value = '';
+                document.getElementById('console').style.display = 'none';
+            }
+        });
+
+        function processCommand(cmd) {
+            if (cmd === 'RICH') { save.up += 50000; updateUI(); }
+            else if (cmd === 'HEAL') { p.hasShield = true; }
+            else if (cmd === 'ASCEND') { score = 99990; updateUI(); }
+            else if (cmd === 'CHAOS') { gravityMultiplier = -1; }
+            else if (cmd === 'SLOW') { speedDivisor = 100000; }
+            else if (cmd === 'BIG') { p.size = 2.0; }
+        }
 
         function updateUI() {
             localStorage.setItem('nd_final_v5', JSON.stringify(save));
@@ -78,35 +122,24 @@
 
         function renderShop() {
             let h = `<p style="color:#0f0">SKINS</p><div class="shop-grid">` + Object.keys(skins).map(k => {
-                const isEq = save.eqSkin === k;
-                return `<div class="item owned ${isEq?'eq':''}" onclick="setSkin('${k}')">${k.toUpperCase()}</div>`
+                return `<div class="item owned ${save.eqSkin === k?'eq':''}" onclick="setSkin('${k}')">${k.toUpperCase()}</div>`
             }).join('') + `</div>`;
-
             h += `<p style="color:#f0f">DRONES</p><div class="shop-grid">` + Object.keys(drones).map(k => {
-                const owned = save.owned.includes(k);
-                const isEq = save.eqDrone === k;
-                return `<div class="item ${owned?'owned':''} ${isEq?'eq':''}" onclick="buy('${k}','drone',${drones[k].p})">${drones[k].n}<br>${owned? (isEq?'EQUIPPED':'SELECT') : drones[k].p}</div>`
+                const owned = save.owned.includes(k), eq = save.eqDrone === k;
+                return `<div class="item ${owned?'owned':''} ${eq?'eq':''}" onclick="buy('${k}','drone',${drones[k].p})">${drones[k].n}<br>${owned?(eq?'EQUIPPED':'SELECT'):drones[k].p}</div>`
             }).join('') + `</div>`;
-
             h += `<p style="color:#ff0">PERKS</p><div class="shop-grid">` + Object.keys(perks).map(k => {
-                const owned = save.owned.includes(k);
-                const isEq = save.eqPerks.includes(k);
-                return `<div class="item ${owned?'owned':''} ${isEq?'eq':''}" onclick="buy('${k}','perk',${perks[k].p})">${perks[k].n}<br>${owned? (isEq?'EQUIPPED':'BUY') : perks[k].p}</div>`
+                const owned = save.owned.includes(k), eq = save.eqPerks.includes(k);
+                return `<div class="item ${owned?'owned':''} ${eq?'eq':''}" onclick="buy('${k}','perk',${perks[k].p})">${perks[k].n}<br>${owned?(eq?'EQUIPPED':'BUY'):perks[k].p}</div>`
             }).join('') + `</div>`;
-
             document.getElementById('shopList').innerHTML = h;
         }
 
         window.setSkin = (k) => { save.eqSkin = k; updateUI(); renderShop(); }
         window.buy = (id, type, price) => {
-            if(!save.owned.includes(id)) {
-                if(save.up >= price) { save.up -= price; save.owned.push(id); } else return;
-            }
+            if(!save.owned.includes(id)) { if(save.up >= price) { save.up -= price; save.owned.push(id); } else return; }
             if(type === 'drone') save.eqDrone = (save.eqDrone === id ? null : id);
-            if(type === 'perk') {
-                if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id);
-                else save.eqPerks.push(id);
-            }
+            if(type === 'perk') { if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id); else save.eqPerks.push(id); }
             updateUI(); renderShop();
         }
 
@@ -121,6 +154,7 @@
             document.getElementById('startScreen').style.display = 'none';
             score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300;
             p.hasShield = save.eqPerks.includes('shield');
+            gravityMultiplier = 1; speedDivisor = 4000; p.size = 0.6;
             isEnding = false; active = true; loop();
         }
 
@@ -128,40 +162,25 @@
             active = false;
             if(win) score += 1000000;
             document.getElementById('titleText').innerText = win ? "ASCENDED" : "CORE RUPTURE";
-            document.getElementById('subText').innerText = win ? "VICTORY ACHIEVED" : "WALLS ARE LETHAL";
             document.getElementById('startScreen').style.display = 'flex';
             updateUI();
         }
 
         function loop() {
             if(!active) return;
-
-            // Ascension Check
-            if(score >= 100000 && !isEnding) {
-                isEnding = true;
-                setTimeout(() => die(true), 1000);
-            }
-
+            if(score >= 100000 && !isEnding) { isEnding = true; setTimeout(() => die(true), 1000); }
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fillRect(0,0,900,600);
-
-            // WALL COLLISION
             if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die();
-
-            p.x += (p.tx - p.x) * 0.15;
-            p.y += (p.ty - p.y) * 0.15;
-
-            // Trail Fix (No more undefined)
+            p.x += (p.tx - p.x) * 0.15; p.y += (p.ty - p.y) * 0.15;
             p.trail.push({x:p.x, y:p.y});
             if(p.trail.length > 20) p.trail.shift();
             p.trail.forEach((t, i) => {
-                ctx.fillStyle = skins[save.eqSkin] || '#0ff';
-                ctx.globalAlpha = i / 20;
-                ctx.beginPath(); ctx.arc(t.x, t.y, i * 0.6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = skins[save.eqSkin] || '#0ff'; ctx.globalAlpha = i / 20;
+                ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
-            // Drone
             if(save.eqDrone) {
                 droneAngle += 0.1;
                 let dx = p.x + Math.cos(droneAngle) * 60, dy = p.y + Math.sin(droneAngle) * 60;
@@ -174,30 +193,23 @@
                 });
             }
 
-            // Enemies
-            if(Math.random() < 0.1) enemies.push({x: Math.random()*880+10, y:-20, v: 3+score/4000});
+            if(Math.random() < 0.1) enemies.push({x: Math.random()*880+10, y: gravityMultiplier > 0 ? -20 : 620, v: (3+score/speedDivisor)*gravityMultiplier});
             enemies.forEach((en, i) => {
                 en.y += en.v;
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-10, en.y-10, 20, 20);
                 if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
                     if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); } else die();
                 }
-                if(en.y > 620) { enemies.splice(i,1); score += 10; updateUI(); }
+                if(en.y > 630 || en.y < -30) { enemies.splice(i,1); score += 10; updateUI(); }
             });
 
-            // Coins
             if(Math.random() < 0.04) coins.push({x: Math.random()*850+25, y: Math.random()*550+25});
             coins.forEach((cn, i) => {
                 let dist = Math.hypot(p.x-cn.x, p.y-cn.y);
-                if(save.eqPerks.includes('magnet') && dist < 180) {
-                    cn.x += (p.x - cn.x) * 0.15; cn.y += (p.y - cn.y) * 0.15;
-                }
-                if(dist < 25) {
-                    save.up += 100; coins.splice(i,1); updateUI();
-                }
+                if(save.eqPerks.includes('magnet') && dist < 180) { cn.x += (p.x - cn.x) * 0.15; cn.y += (p.y - cn.y) * 0.15; }
+                if(dist < 25) { save.up += 100; coins.splice(i,1); updateUI(); }
                 ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 6, 0, Math.PI*2); ctx.fill();
             });
-
             requestAnimationFrame(loop);
         }
     </script>
