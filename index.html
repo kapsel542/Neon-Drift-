@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: LEGACY ASCENSION</title>
+    <title>Neon Drift: ASCENSION FIXED</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
         body { margin: 0; background: #010105; color: #0ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -11,50 +11,37 @@
         canvas { border: 3px solid #f0f; background: #000; width: 95vw; height: auto; max-height: 75vh; aspect-ratio: 9/6; box-shadow: 0 0 40px rgba(255,0,255,0.2); cursor: none; }
 
         #hud { position: absolute; top: 10px; width: 95vw; display: flex; justify-content: space-between; z-index: 5000; pointer-events: none; }
-        .stat-box { background: rgba(0,0,0,0.8); padding: 12px; border-left: 4px solid #0ff; pointer-events: none; font-weight: bold; }
-        .menu-bar { display: flex; gap: 10px; pointer-events: auto; }
-        .m-btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; }
-        .m-btn:hover { background: #0ff; color: #000; }
+        .stat-box { background: rgba(0,0,0,0.8); padding: 12px; border-left: 4px solid #0ff; pointer-events: none; }
+        .m-btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; pointer-events: auto; }
 
-        .sidebar { position: absolute; right: 0; top: 0; width: 340px; height: 100%; background: #050510; border-left: 3px solid #0ff; z-index: 6000; padding: 25px; display: none; overflow-y: auto; box-shadow: -15px 0 35px #000; }
+        .sidebar { position: absolute; right: 0; top: 0; width: 340px; height: 100%; background: #050510; border-left: 3px solid #0ff; z-index: 6000; padding: 25px; display: none; overflow-y: auto; }
         .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .item { background: #111; border: 1px solid #333; padding: 12px; text-align: center; cursor: pointer; font-size: 0.7rem; }
         .item.owned { color: #0f0; border-color: #0f0; }
         .item.eq { background: #002200; border-color: #0f0; box-shadow: inset 0 0 10px #0f0; }
 
         .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
-        .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; box-shadow: 0 0 20px rgba(0,255,0,0.3); }
+        .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; }
         input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
-        
-        #alert { position: absolute; top: 120px; width: 100%; text-align: center; font-size: 2.5rem; color: #f0f; display: none; font-weight: bold; z-index: 3500; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="hud">
         <div class="stat-box">SCORE: <span id="sc">0</span><br><span style="color:#ff0">UP: <span id="upc">0</span></span></div>
-        <div class="menu-bar">
-            <button class="m-btn" onclick="toggleShop()">SHOP</button>
-        </div>
+        <button class="m-btn" onclick="toggleShop()">SHOP</button>
     </div>
 
-    <div id="alert">ASCENSION REACHED</div>
-
     <div id="shop" class="sidebar">
-        <h2 style="color:#0ff; margin-top:0;">PILOT SHOP</h2>
-        <p style="color:#f0f; margin-bottom:5px;">DRONES</p>
-        <div id="droneContainer" class="shop-grid"></div>
-        <p style="color:#ff0; margin-bottom:5px;">PERKS</p>
-        <div id="perkContainer" class="shop-grid"></div>
-        <p style="color:#0f0; margin-bottom:5px;">SKINS</p>
-        <div id="skinContainer" class="shop-grid"></div>
-        <button class="m-btn" style="width:100%; border-color:#f00; color:#f00;" onclick="toggleShop()">EXIT SHOP</button>
+        <h2 style="color:#0ff;">PILOT SHOP</h2>
+        <div id="shopList"></div>
+        <button class="m-btn" style="width:100%; border-color:#f00; color:#f00; margin-top:20px;" onclick="toggleShop()">CLOSE</button>
     </div>
 
     <div id="startScreen" class="overlay">
-        <h1 style="color:#0ff; font-size: 4rem; margin:0; text-shadow: 0 0 20px #0ff;">NEON DRIFT</h1>
-        <p style="color:#f0f;">GOAL: 100,000 SCORE</p>
-        <input type="text" id="nickInput" placeholder="ENTER PILOT ID">
+        <h1 id="titleText" style="color:#0ff; font-size: 4rem; margin:0;">NEON DRIFT</h1>
+        <p id="subText" style="color:#f0f;">GOAL: 100,000</p>
+        <input type="text" id="nickInput" placeholder="PILOT_ID">
         <button class="start-btn" onclick="startGame()">ENGAGE</button>
     </div>
 
@@ -65,31 +52,20 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
-        let save = JSON.parse(localStorage.getItem('nd_pro_save')) || {
+        let save = JSON.parse(localStorage.getItem('nd_final_v5')) || {
             up: 0, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: []
         };
 
-        const skinData = {'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f'};
-        const droneData = {
-            'scout': {n: 'Scout Drone', p: 3000, r: 150},
-            'hunter': {n: 'Hunter Drone', p: 7000, r: 250},
-            'sniper': {n: 'Sniper Drone', p: 12000, r: 600}
-        };
-        const perkData = {
-            'magnet': {n: 'Magnet', p: 4000},
-            'shield': {n: 'Shield', p: 6000},
-            'banker': {n: 'Banker', p: 8000}
-        };
+        const skins = {'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f'};
+        const drones = {'scout': {n:'Scout', p:3000, r:150}, 'sniper': {n:'Sniper', p:10000, r:600}};
+        const perks = {'magnet': {n:'Magnet', p:4000}, 'shield': {n:'Shield', p:6000}};
 
         let active = false, score = 0, enemies = [], coins = [], isEnding = false;
         let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false };
         let droneAngle = 0;
 
-        document.getElementById('nickInput').value = save.nick;
-        updateUI();
-
         function updateUI() {
-            localStorage.setItem('nd_pro_save', JSON.stringify(save));
+            localStorage.setItem('nd_final_v5', JSON.stringify(save));
             document.getElementById('upc').innerText = save.up;
             document.getElementById('sc').innerText = Math.floor(score);
         }
@@ -101,25 +77,32 @@
         }
 
         function renderShop() {
-            const makeGrid = (data, type, eqKey) => Object.keys(data).map(k => {
-                const owned = save.owned.includes(k);
-                const eq = (type === 'perk') ? save.eqPerks.includes(k) : save[eqKey] === k;
-                return `<div class="item ${owned?'owned':''} ${eq?'eq':''}" onclick="buy('${k}','${type}',${data[k].p || 0},'${eqKey}')">
-                    ${data[k].n || k.toUpperCase()}<br>${owned ? (eq?'EQUIPPED':'SELECT') : data[k].p + ' UP'}
-                </div>`;
-            }).join('');
+            let h = `<p style="color:#0f0">SKINS</p><div class="shop-grid">` + Object.keys(skins).map(k => {
+                const isEq = save.eqSkin === k;
+                return `<div class="item owned ${isEq?'eq':''}" onclick="setSkin('${k}')">${k.toUpperCase()}</div>`
+            }).join('') + `</div>`;
 
-            document.getElementById('skinContainer').innerHTML = makeGrid(skinData, 'skin', 'eqSkin');
-            document.getElementById('droneContainer').innerHTML = makeGrid(droneData, 'drone', 'eqDrone');
-            document.getElementById('perkContainer').innerHTML = makeGrid(perkData, 'perk', 'eqPerks');
+            h += `<p style="color:#f0f">DRONES</p><div class="shop-grid">` + Object.keys(drones).map(k => {
+                const owned = save.owned.includes(k);
+                const isEq = save.eqDrone === k;
+                return `<div class="item ${owned?'owned':''} ${isEq?'eq':''}" onclick="buy('${k}','drone',${drones[k].p})">${drones[k].n}<br>${owned? (isEq?'EQUIPPED':'SELECT') : drones[k].p}</div>`
+            }).join('') + `</div>`;
+
+            h += `<p style="color:#ff0">PERKS</p><div class="shop-grid">` + Object.keys(perks).map(k => {
+                const owned = save.owned.includes(k);
+                const isEq = save.eqPerks.includes(k);
+                return `<div class="item ${owned?'owned':''} ${isEq?'eq':''}" onclick="buy('${k}','perk',${perks[k].p})">${perks[k].n}<br>${owned? (isEq?'EQUIPPED':'BUY') : perks[k].p}</div>`
+            }).join('') + `</div>`;
+
+            document.getElementById('shopList').innerHTML = h;
         }
 
-        function buy(id, type, price, eqKey) {
+        window.setSkin = (k) => { save.eqSkin = k; updateUI(); renderShop(); }
+        window.buy = (id, type, price) => {
             if(!save.owned.includes(id)) {
                 if(save.up >= price) { save.up -= price; save.owned.push(id); } else return;
             }
-            if(type === 'skin') save.eqSkin = id;
-            if(type === 'drone') save.eqDrone = (save.eqDrone === id) ? null : id;
+            if(type === 'drone') save.eqDrone = (save.eqDrone === id ? null : id);
             if(type === 'perk') {
                 if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id);
                 else save.eqPerks.push(id);
@@ -136,51 +119,47 @@
         function startGame() {
             save.nick = document.getElementById('nickInput').value || "PILOT";
             document.getElementById('startScreen').style.display = 'none';
-            score = 0; enemies = []; coins = []; p.trail = [];
-            p.x = 450; p.y = 300; p.hasShield = save.eqPerks.includes('shield');
-            active = true; isEnding = false;
-            loop();
+            score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300;
+            p.hasShield = save.eqPerks.includes('shield');
+            isEnding = false; active = true; loop();
         }
 
-        function die(victory = false) {
+        function die(win = false) {
             active = false;
-            if(victory) score = 1000000;
+            if(win) score += 1000000;
+            document.getElementById('titleText').innerText = win ? "ASCENDED" : "CORE RUPTURE";
+            document.getElementById('subText').innerText = win ? "VICTORY ACHIEVED" : "WALLS ARE LETHAL";
             document.getElementById('startScreen').style.display = 'flex';
-            document.getElementById('startScreen').querySelector('h1').innerText = victory ? "ASCENDED" : "GAME OVER";
             updateUI();
         }
 
         function loop() {
             if(!active) return;
 
-            // 100k Win Condition
+            // Ascension Check
             if(score >= 100000 && !isEnding) {
                 isEnding = true;
-                document.getElementById('alert').style.display = 'block';
-                setTimeout(() => die(true), 2000);
+                setTimeout(() => die(true), 1000);
             }
 
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fillRect(0,0,900,600);
 
-            // Movement
+            // WALL COLLISION
+            if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die();
+
             p.x += (p.tx - p.x) * 0.15;
             p.y += (p.ty - p.y) * 0.15;
 
-            // Trail
+            // Trail Fix (No more undefined)
             p.trail.push({x:p.x, y:p.y});
             if(p.trail.length > 20) p.trail.shift();
             p.trail.forEach((t, i) => {
-                ctx.fillStyle = skinData[save.eqSkin];
+                ctx.fillStyle = skins[save.eqSkin] || '#0ff';
                 ctx.globalAlpha = i / 20;
-                ctx.beginPath(); ctx.arc(t.x, t.y, i * 0.8, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(t.x, t.y, i * 0.6, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
-
-            // Core
-            ctx.shadowBlur = 15; ctx.shadowColor = skinData[save.eqSkin];
-            ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
 
             // Drone
             if(save.eqDrone) {
@@ -188,36 +167,33 @@
                 let dx = p.x + Math.cos(droneAngle) * 60, dy = p.y + Math.sin(droneAngle) * 60;
                 ctx.fillStyle = '#fff'; ctx.fillRect(dx-4, dy-4, 8, 8);
                 enemies.forEach((en, i) => {
-                    if(Math.hypot(dx-en.x, dy-en.y) < droneData[save.eqDrone].r) {
-                        ctx.strokeStyle = skinData[save.eqSkin]; ctx.beginPath(); 
-                        ctx.moveTo(dx,dy); ctx.lineTo(en.x, en.y); ctx.stroke();
+                    if(Math.hypot(dx-en.x, dy-en.y) < drones[save.eqDrone].r) {
+                        ctx.strokeStyle = skins[save.eqSkin]; ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(en.x, en.y); ctx.stroke();
                         enemies.splice(i,1); score += 50; updateUI();
                     }
                 });
             }
 
-            // Enemies (Blocks)
-            if(Math.random() < 0.1) enemies.push({x: Math.random()*900, y:-20, v: 3 + score/5000});
+            // Enemies
+            if(Math.random() < 0.1) enemies.push({x: Math.random()*880+10, y:-20, v: 3+score/4000});
             enemies.forEach((en, i) => {
                 en.y += en.v;
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-10, en.y-10, 20, 20);
                 if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
-                    if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
-                    else die();
+                    if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); } else die();
                 }
                 if(en.y > 620) { enemies.splice(i,1); score += 10; updateUI(); }
             });
 
             // Coins
-            if(Math.random() < 0.03) coins.push({x: Math.random()*850, y: Math.random()*550});
+            if(Math.random() < 0.04) coins.push({x: Math.random()*850+25, y: Math.random()*550+25});
             coins.forEach((cn, i) => {
                 let dist = Math.hypot(p.x-cn.x, p.y-cn.y);
                 if(save.eqPerks.includes('magnet') && dist < 180) {
                     cn.x += (p.x - cn.x) * 0.15; cn.y += (p.y - cn.y) * 0.15;
                 }
                 if(dist < 25) {
-                    save.up += (save.eqPerks.includes('banker') ? 200 : 100);
-                    coins.splice(i,1); updateUI();
+                    save.up += 100; coins.splice(i,1); updateUI();
                 }
                 ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 6, 0, Math.PI*2); ctx.fill();
             });
