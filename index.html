@@ -171,13 +171,13 @@
                 }
             }
 
-            // Boss Spawning (3x size, 2x speed)
+            // Boss Spawning (3x size, 1.7x speed)
             let spawnRate = bossActive ? 0.25 : (eventActive ? 0.35 : 0.14);
             if(Math.random() < spawnRate) {
                 enemies.push({
                     x: Math.random()*880+10, 
                     y: -100, 
-                    v: (3.5+score/5000) * (bossActive ? 2 : 1), 
+                    v: (3.5+score/5000) * (bossActive ? 1.7 : 1), 
                     isBoss: bossActive 
                 });
             }
