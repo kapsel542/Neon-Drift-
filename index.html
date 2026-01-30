@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: Prestige Protocol</title>
+    <title>Neon Drift: Boss Protocol</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
         body { margin: 0; background: #010105; color: #0ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -20,8 +20,8 @@
         .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; }
         input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
         #console { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 5px; display: none; z-index: 9999; }
-        #console input { background: transparent; border: none; color: rgba(255, 255, 255, 0.5); font-family: 'Courier New', monospace; padding: 5px; width: 250px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid #0f0; }
-        #event-banner { position: absolute; top: 100px; width: 100%; text-align: center; font-size: 2rem; font-weight: bold; text-shadow: 0 0 10px #f0f; pointer-events: none; display: none; z-index: 7000; }
+        #console input { background: transparent; border: none; color: #0f0; font-family: 'Courier New', monospace; padding: 5px; width: 250px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid #0f0; outline: none; }
+        #event-banner { position: absolute; top: 100px; width: 100%; text-align: center; font-size: 2.5rem; font-weight: bold; text-shadow: 0 0 15px #f0f; pointer-events: none; display: none; z-index: 7000; }
     </style>
 </head>
 <body>
@@ -78,8 +78,8 @@
 
         let active = false, score = 0, enemies = [], coins = [], lastEventScore = 0;
         let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6, speed: 0.15, ghostMod: 0.05, god: false };
-        let droneAngle = 0, droneShots = 0, droneOnCooldown = false, cdStartTime = 0;
-        let bossActive = false, bossTimer = 0, eventActive = false, eventTimer = 0, timeMod = 1;
+        let droneAngle = 0, droneShots = 0, droneOnCooldown = false;
+        let bossActive = false, bossTimer = 0, eventActive = false, timeMod = 1;
 
         function updateUI() {
             document.getElementById('upc').innerText = Math.floor(save.up).toLocaleString();
@@ -101,18 +101,31 @@
         }
 
         function triggerBoss() {
-            bossActive = true; bossTimer = 20 * 60;
+            if (bossActive) return;
+            bossActive = true;
+            bossTimer = 1200; 
             const banner = document.getElementById('event-banner');
-            banner.innerText = "BOSS PROTOCOL: SURVIVE!";
-            banner.style.display = 'block'; banner.style.color = '#ff0';
-            enemies = [];
+            banner.innerText = "BOSS PHASE: TITAN BLOCKS!";
+            banner.style.display = 'block'; banner.style.color = '#f00';
+            enemies = []; 
         }
 
         function loop() {
             if(!active) return;
-            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0,0,900,600);
-            if(!bossActive && score >= 25000 && lastEventScore < 25000) triggerBoss();
-            if(score - lastEventScore >= 2500) { triggerEvent(); lastEventScore = score; }
+
+            // Background Pulse Logic
+            if(bossActive) {
+                ctx.fillStyle = `rgba(${30 + Math.sin(Date.now()/150)*20}, 0, 0, 0.3)`;
+            } else {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            }
+            ctx.fillRect(0,0,900,600);
+            
+            // Progression
+            if(!bossActive && score >= 25000 && (score % 25000 < 500) && score - lastEventScore > 5000) {
+                 triggerBoss();
+            }
+            if(!bossActive && score - lastEventScore >= 2500) { triggerEvent(); lastEventScore = score; }
 
             p.x += (p.tx - p.x) * p.speed * timeMod;
             p.y += (p.ty - p.y) * p.speed * timeMod;
@@ -122,23 +135,21 @@
             p.trail.push({x:p.x, y:p.y}); if(p.trail.length > 20) p.trail.shift();
             p.trail.forEach((t, i) => {
                 let color = skins[save.eqSkin] === 'rainbow' ? `hsl(${Date.now()/5 % 360}, 100%, 50%)` : skins[save.eqSkin];
-                if(p.god && Date.now() % 200 < 100) color = "#fff";
+                if(p.god) color = (Date.now() % 200 < 100) ? "#fff" : color;
                 ctx.fillStyle = color; ctx.globalAlpha = i / 20; ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
             if(bossActive) {
                 bossTimer--;
-                let pulse = Math.sin(Date.now()/200) * 20;
-                ctx.strokeStyle = '#ff0'; ctx.lineWidth = 5;
-                ctx.beginPath(); ctx.arc(450, 300, 100 + pulse, 0, Math.PI*2); ctx.stroke();
-                ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(450, 300, 40, 0, Math.PI*2); ctx.fill();
-                let dist = Math.hypot(p.x-450, p.y-300);
-                if(!p.god && dist < 150 + pulse) die("PULSE DISINTEGRATION");
-                p.x += (450 - p.x) * 0.02; p.y += (300 - p.y) * 0.02;
-                if(bossTimer <= 0) { bossActive = false; save.up += 100000; document.getElementById('event-banner').style.display = 'none'; updateUI(); saveData(); }
+                if(bossTimer <= 0) {
+                    bossActive = false; save.up += 100000;
+                    document.getElementById('event-banner').style.display = 'none';
+                    lastEventScore = score; updateUI(); saveData();
+                }
             }
 
+            // DRONES
             if(save.eqDrone) {
                 droneAngle += 0.15 * timeMod;
                 let dx = p.x + Math.cos(droneAngle) * 75, dy = p.y + Math.sin(droneAngle) * 75;
@@ -147,12 +158,12 @@
                 ctx.fillRect(dx-7, dy-7, 14, 14);
                 if(!droneOnCooldown) {
                     for(let i = enemies.length-1; i >= 0; i--) {
-                        if(Math.hypot(dx-enemies[i].x, dy-enemies[i].y) < dData.r) {
+                        if(Math.hypot(dx-enemies[i].x, dy-enemies[i].y) < dData.r + (enemies[i].isBoss ? 40 : 0)) {
                             ctx.strokeStyle = skins[save.eqSkin] === 'rainbow' ? '#fff' : skins[save.eqSkin];
                             ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(enemies[i].x, enemies[i].y); ctx.stroke();
                             enemies.splice(i,1); score += 50; updateUI();
                             if(++droneShots >= dData.limit) {
-                                droneOnCooldown = true; cdStartTime = Date.now();
+                                droneOnCooldown = true;
                                 setTimeout(() => { droneOnCooldown = false; droneShots = 0; }, dData.cd);
                             } break;
                         }
@@ -160,41 +171,53 @@
                 }
             }
 
-            let spawnChance = (eventActive && document.getElementById('event-banner').innerText === 'GRID OVERLOAD') ? 0.35 : 0.14;
-            if(!bossActive && Math.random() < spawnChance) enemies.push({x: Math.random()*880+10, y: -20, v: (3.5+score/5000)});
-            
+            // ENEMY SPAWNING (Boss blocks are 3x size and 2x speed)
+            let spawnRate = bossActive ? 0.25 : (eventActive ? 0.35 : 0.14);
+            if(Math.random() < spawnRate) {
+                enemies.push({
+                    x: Math.random()*880+10, 
+                    y: -100, 
+                    v: (3.5+score/5000) * (bossActive ? 2 : 1), 
+                    isBoss: bossActive 
+                });
+            }
+
             enemies.forEach((en, i) => {
                 en.y += en.v * timeMod;
-                ctx.fillStyle = '#f0f'; ctx.fillRect(en.x - 11, en.y - 11, 22, 22);
-                if(!p.god && Math.hypot(p.x-en.x, p.y-en.y) < 20) {
+                let sz = en.isBoss ? 66 : 22; // 3x Bigger for Boss
+                ctx.fillStyle = en.isBoss ? '#f00' : '#f0f'; 
+                ctx.fillRect(en.x - sz/2, en.y - sz/2, sz, sz);
+                
+                if(!p.god && Math.hypot(p.x-en.x, p.y-en.y) < sz/2 + 5) {
                     if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
-                    else if(save.eqPerks.includes('ghost') && Math.random() < p.ghostMod) enemies.splice(i,1);
-                    else die("IMPACT DETECTED");
+                    else die(en.isBoss ? "CRUSHED BY TITAN" : "IMPACT DETECTED");
                 }
-                if(en.y > 650) { enemies.splice(i,1); score += 10; updateUI(); }
+                if(en.y > 700) { enemies.splice(i,1); score += 10; updateUI(); }
             });
 
-            let coinChance = (eventActive && document.getElementById('event-banner').innerText === 'HYPER-COIN') ? 0.4 : 0.05;
-            if(Math.random() < coinChance) coins.push({x: Math.random()*850+25, y: -20});
+            // COINS
+            if(Math.random() < (eventActive ? 0.4 : 0.05)) coins.push({x: Math.random()*850+25, y: -20});
             coins.forEach((cn, i) => {
                 cn.y += 2.5 * timeMod;
-                if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 220) {
-                    cn.x += (p.x - cn.x) * 0.18; cn.y += (p.y - cn.y) * 0.18;
+                if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 200) {
+                    cn.x += (p.x - cn.x) * 0.15; cn.y += (p.y - cn.y) * 0.15;
                 }
-                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); saveData(); }
+                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); }
                 ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 7, 0, Math.PI*2); ctx.fill();
                 if(cn.y > 620) coins.splice(i,1);
             });
+
             requestAnimationFrame(loop);
         }
 
         function startGame() {
             save.nick = document.getElementById('nickInput').value || "PILOT";
             document.getElementById('startScreen').style.display = 'none';
-            score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300; lastEventScore = 0;
+            score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300; 
+            lastEventScore = 0; bossActive = false; eventActive = false; active = true; 
             p.hasShield = save.eqPerks.includes('shield');
             p.speed = save.eqPerks.includes('drift') ? 0.25 : 0.15;
-            p.god = false; bossActive = false; eventActive = false; active = true; loop();
+            loop();
         }
 
         function die(reason) {
@@ -207,7 +230,7 @@
 
         function saveData() {
             if(score > save.best) save.best = Math.floor(score);
-            try { localStorage.setItem('nd_v10_final', JSON.stringify(save)); } catch(e) {}
+            localStorage.setItem('nd_v10_final', JSON.stringify(save));
         }
 
         function toggleShop() {
@@ -235,7 +258,7 @@
         window.setSkin = (k) => { save.eqSkin = k; saveData(); updateUI(); renderShop(); }
         window.buy = (id, type, price) => {
             if(!save.owned.includes(id)) { if(save.up >= price) { save.up -= price; save.owned.push(id); } else return; }
-            if(type === 'drone') { save.eqDrone = (save.eqDrone === id ? null : id); droneOnCooldown = false; droneShots = 0; }
+            if(type === 'drone') { save.eqDrone = (save.eqDrone === id ? null : id); }
             if(type === 'perk') { if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id); else save.eqPerks.push(id); }
             saveData(); updateUI(); renderShop();
         }
@@ -255,7 +278,8 @@
             if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
                 let cmd = document.getElementById('consoleInput').value.toUpperCase();
                 if (cmd === 'RICH') { save.up += 1000000; updateUI(); }
-                if (cmd === 'GOD') { p.god = !p.god; console.log("GOD_MODE: " + p.god); }
+                if (cmd === 'GOD') { p.god = !p.god; }
+                if (cmd === 'BOSS') { triggerBoss(); }
                 document.getElementById('consoleInput').value = '';
             }
         });
