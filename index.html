@@ -57,10 +57,13 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
-        // Added 'best' to the save object
-        let save = JSON.parse(localStorage.getItem('nd_v10_final')) || {
-            up: 10000, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: [], best: 0
-        };
+        let save = { up: 10000, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: [], best: 0 };
+        
+        // Safe Load
+        try {
+            const data = localStorage.getItem('nd_v10_final');
+            if(data) save = JSON.parse(data);
+        } catch(e) { console.log("Save failed to load"); }
 
         const skins = {
             'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f', 'void': '#200540',
@@ -96,24 +99,28 @@
             }
             if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
                 let cmd = document.getElementById('consoleInput').value.toUpperCase();
-                if (cmd === 'RICH') save.up += 1000000;
+                if (cmd === 'RICH') { save.up += 1000000; updateUI(); }
                 else if (cmd === 'GIVEALL') {
                     Object.keys(skins).concat(Object.keys(drones), Object.keys(perks)).forEach(k => { if(!save.owned.includes(k)) save.owned.push(k); });
+                    updateUI();
                 }
                 document.getElementById('consoleInput').value = '';
                 document.getElementById('console').style.display = 'none';
-                updateUI();
             }
         });
 
+        // FIXED: updateUI now only handles the screen, saveData handles the disk.
         function updateUI() {
-            // Check if current score beat high score
-            if(score > save.best) save.best = Math.floor(score);
-            
-            localStorage.setItem('nd_v10_final', JSON.stringify(save));
-            document.getElementById('upc').innerText = save.up.toLocaleString();
+            document.getElementById('upc').innerText = Math.floor(save.up).toLocaleString();
             document.getElementById('sc').innerText = Math.floor(score).toLocaleString();
-            document.getElementById('hi').innerText = save.best.toLocaleString();
+            document.getElementById('hi').innerText = Math.floor(save.best).toLocaleString();
+        }
+
+        function saveData() {
+            if(score > save.best) save.best = Math.floor(score);
+            try {
+                localStorage.setItem('nd_v10_final', JSON.stringify(save));
+            } catch(e) {}
         }
 
         function toggleShop() {
@@ -138,12 +145,12 @@
             document.getElementById('shopList').innerHTML = h;
         }
 
-        window.setSkin = (k) => { save.eqSkin = k; updateUI(); renderShop(); }
+        window.setSkin = (k) => { save.eqSkin = k; saveData(); updateUI(); renderShop(); }
         window.buy = (id, type, price) => {
             if(!save.owned.includes(id)) { if(save.up >= price) { save.up -= price; save.owned.push(id); } else return; }
             if(type === 'drone') { save.eqDrone = (save.eqDrone === id ? null : id); droneOnCooldown = false; droneShots = 0; }
             if(type === 'perk') { if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id); else save.eqPerks.push(id); }
-            updateUI(); renderShop();
+            saveData(); updateUI(); renderShop();
         }
 
         window.addEventListener('mousemove', e => {
@@ -163,9 +170,10 @@
 
         function die(reason) {
             active = false;
+            saveData(); // Save score and highscore immediately on death
             document.getElementById('titleText').innerText = reason || "CORE DESTROYED";
             document.getElementById('startScreen').style.display = 'flex';
-            updateUI(); // Final save on death
+            updateUI();
         }
 
         function loop() {
@@ -173,7 +181,6 @@
             ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0,0,900,600);
             p.x += (p.tx - p.x) * p.speed; p.y += (p.ty - p.y) * p.speed;
 
-            // --- WALL DETECTION ---
             if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die("BOUNDARY BREACH");
             
             p.trail.push({x:p.x, y:p.y}); if(p.trail.length > 20) p.trail.shift();
@@ -227,14 +234,13 @@
                 if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 220) {
                     cn.x += (p.x - cn.x) * 0.18; cn.y += (p.y - cn.y) * 0.18;
                 }
-                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); }
+                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); saveData(); }
                 ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 7, 0, Math.PI*2); ctx.fill();
                 if(cn.y > 620) coins.splice(i,1);
             });
             requestAnimationFrame(loop);
         }
         
-        // Initial UI load
         updateUI();
     </script>
 </body>
