@@ -3,24 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: Scout Nerfed</title>
+    <title>Neon Drift</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
         body { margin: 0; background: #010105; color: #0ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
         canvas { border: 3px solid #f0f; background: #000; width: 95vw; height: auto; max-height: 75vh; aspect-ratio: 9/6; box-shadow: 0 0 40px rgba(255,0,255,0.2); cursor: none; }
+        
         #hud { position: absolute; top: 10px; width: 95vw; display: flex; justify-content: space-between; z-index: 5000; pointer-events: none; }
         .stat-box { background: rgba(0,0,0,0.8); padding: 12px; border-left: 4px solid #0ff; pointer-events: none; }
         .m-btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; pointer-events: auto; }
+
         .sidebar { position: absolute; right: 0; top: 0; width: 340px; height: 100%; background: #050510; border-left: 3px solid #0ff; z-index: 6000; padding: 25px; display: none; overflow-y: auto; }
         .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
         .item { background: #111; border: 1px solid #333; padding: 12px; text-align: center; cursor: pointer; font-size: 0.7rem; }
         .item.owned { color: #0f0; border-color: #0f0; }
         .item.eq { background: #002200; border-color: #0f0; box-shadow: inset 0 0 10px #0f0; }
+
         .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
         .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; }
         input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
-        #console { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 20, 0, 0.9); border: 1px solid #0f0; padding: 10px; display: none; z-index: 9999; box-shadow: 0 0 20px #0f0; }
-        #console input { background: #000; border: 1px solid #0f0; color: #0f0; font-family: 'Courier New', monospace; padding: 5px; width: 200px; font-size: 0.9rem; }
+
+        /* STEALTH CONSOLE */
+        #console { 
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); 
+            background: rgba(0, 0, 0, 0.7); padding: 5px; 
+            display: none; z-index: 9999; 
+        }
+        #console input { 
+            background: transparent; border: none; color: rgba(0, 255, 0, 0.5); 
+            font-family: 'Courier New', monospace; padding: 5px; width: 150px; font-size: 0.8rem; text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -38,14 +50,13 @@
 
     <div id="startScreen" class="overlay">
         <h1 id="titleText" style="color:#0ff; font-size: 4rem; margin:0;">NEON DRIFT</h1>
-        <p id="subText" style="color:#f0f;">SCOUT NERFED: 3 SHOTS / 10S CD</p>
+        <p id="subText" style="color:#f0f;">GOAL: 100,000</p>
         <input type="text" id="nickInput" placeholder="PILOT_ID">
         <button class="start-btn" onclick="startGame()">ENGAGE</button>
     </div>
 
     <div id="console">
-        <span style="color:#0f0; font-size:12px;">SYS_LINK></span>
-        <input type="text" id="consoleInput" placeholder="CODE">
+        <input type="text" id="consoleInput" placeholder="...">
     </div>
 
     <canvas id="c"></canvas>
@@ -68,23 +79,23 @@
 
         let active = false, score = 0, enemies = [], coins = [], isEnding = false;
         let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6 };
-        
         let droneAngle = 0, gravityMultiplier = 1, speedDivisor = 4000;
         let droneShots = 0, droneOnCooldown = false;
 
-        let f6Count = 0, f6Timer;
+        // STEALTH CONSOLE HANDLER
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'F6') {
-                e.preventDefault(); f6Count++;
-                clearTimeout(f6Timer);
-                f6Timer = setTimeout(() => { f6Count = 0; }, 500);
-                if (f6Count === 3) {
-                    const con = document.getElementById('console');
-                    con.style.display = con.style.display === 'block' ? 'none' : 'block';
-                    if(con.style.display === 'block') document.getElementById('consoleInput').focus();
-                    f6Count = 0;
+            if (e.key === '`') {
+                e.preventDefault();
+                const con = document.getElementById('console');
+                const isVisible = con.style.display === 'block';
+                con.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    const input = document.getElementById('consoleInput');
+                    input.value = '';
+                    input.focus();
                 }
             }
+            
             if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
                 processCommand(document.getElementById('consoleInput').value.toUpperCase());
                 document.getElementById('consoleInput').value = '';
@@ -178,11 +189,8 @@
             if(save.eqDrone) {
                 droneAngle += 0.1;
                 let dx = p.x + Math.cos(droneAngle) * 60, dy = p.y + Math.sin(droneAngle) * 60;
-                
-                // Drone visual state
                 ctx.fillStyle = droneOnCooldown ? '#222' : '#fff'; 
                 ctx.fillRect(dx-4, dy-4, 8, 8);
-
                 if(!droneOnCooldown) {
                     for(let i = enemies.length-1; i >= 0; i--) {
                         let en = enemies[i];
@@ -191,16 +199,11 @@
                             ctx.strokeStyle = skins[save.eqSkin]; ctx.lineWidth = 2;
                             ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(en.x, en.y); ctx.stroke();
                             enemies.splice(i,1); score += 50; updateUI();
-
                             droneShots++;
-                            const currentDrone = drones[save.eqDrone];
-                            
-                            if(droneShots >= currentDrone.limit) {
+                            const d = drones[save.eqDrone];
+                            if(droneShots >= d.limit) {
                                 droneOnCooldown = true;
-                                setTimeout(() => { 
-                                    droneOnCooldown = false; 
-                                    droneShots = 0; 
-                                }, currentDrone.cd);
+                                setTimeout(() => { droneOnCooldown = false; droneShots = 0; }, d.cd);
                             }
                             break; 
                         }
