@@ -20,10 +20,13 @@
         .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; }
         input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
         #console { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); padding: 5px; display: none; z-index: 9999; }
-        #console input { background: transparent; border: none; color: rgba(0, 255, 0, 0.5); font-family: 'Courier New', monospace; padding: 5px; width: 250px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid #0f0; }
+        #console input { background: transparent; border: none; color: rgba(255, 255, 255, 0.5); font-family: 'Courier New', monospace; padding: 5px; width: 250px; font-size: 0.8rem; text-align: center; border-bottom: 1px solid #0f0; }
+        #event-banner { position: absolute; top: 100px; width: 100%; text-align: center; font-size: 2rem; font-weight: bold; text-shadow: 0 0 10px #f0f; pointer-events: none; display: none; z-index: 7000; }
     </style>
 </head>
 <body>
+
+    <div id="event-banner">EVENT ACTIVE</div>
 
     <div id="hud">
         <div class="stat-box">
@@ -46,9 +49,7 @@
         <button class="start-btn" onclick="startGame()">ENGAGE</button>
     </div>
 
-    <div id="console">
-        <input type="text" id="consoleInput" placeholder="ROOT_ACCESS_...">
-    </div>
+    <div id="console"><input type="text" id="consoleInput" placeholder="ROOT_ACCESS_..."></div>
 
     <canvas id="c"></canvas>
 
@@ -58,18 +59,12 @@
         canvas.width = 900; canvas.height = 600;
 
         let save = { up: 10000, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: [], best: 0 };
-        
-        // Safe Load
         try {
             const data = localStorage.getItem('nd_v10_final');
             if(data) save = JSON.parse(data);
-        } catch(e) { console.log("Save failed to load"); }
+        } catch(e) {}
 
-        const skins = {
-            'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f', 'void': '#200540',
-            'neon': '#f0f', 'chrome': '#aaa', 'hacker': '#00ff44', 'plasma': '#4400ff', 'glitch': 'rainbow'
-        };
-        
+        const skins = { 'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f', 'void': '#200540', 'neon': '#f0f', 'chrome': '#aaa', 'hacker': '#00ff44', 'plasma': '#4400ff', 'glitch': 'rainbow' };
         const drones = {
             'scout': {n:'Scout', p:20000, r:150, limit: 3, cd: 7000}, 
             'sniper': {n:'Deadshot', p:55000, r:600, limit: 3, cd: 5000},
@@ -79,48 +74,162 @@
             'reaper': {n:'Soul Reaper', p:350000, r:750, limit: 8, cd: 8000},
             'titan': {n:'Ω TITAN', p:500000, r:900, limit: 20, cd: 12000}
         };
+        const perks = { 'magnet': {n:'Mag-Link', p:15000}, 'shield': {n:'Aegis', p:30000}, 'ghost': {n:'Phase', p:50000}, 'frenzy': {n:'Overclock', p:80000}, 'static': {n:'EMP', p:100000}, 'luck': {n:'Miner', p:120000}, 'drift': {n:'Speed', p:150000} };
 
-        const perks = {
-            'magnet': {n:'Mag-Link', p:15000}, 'shield': {n:'Aegis', p:30000}, 'ghost': {n:'Phase', p:50000},
-            'frenzy': {n:'Overclock', p:80000}, 'static': {n:'EMP', p:100000}, 
-            'luck': {n:'Miner', p:120000}, 'drift': {n:'Speed', p:150000}
-        };
-
-        let active = false, score = 0, enemies = [], coins = [];
+        let active = false, score = 0, enemies = [], coins = [], lastEventScore = 0;
         let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6, speed: 0.15, ghostMod: 0.05 };
         let droneAngle = 0, droneShots = 0, droneOnCooldown = false, cdStartTime = 0;
+        let bossActive = false, bossTimer = 0, eventActive = false, eventTimer = 0, timeMod = 1;
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === '`') {
-                e.preventDefault();
-                const con = document.getElementById('console');
-                con.style.display = (con.style.display === 'block') ? 'none' : 'block';
-                if (con.style.display === 'block') document.getElementById('consoleInput').focus();
-            }
-            if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
-                let cmd = document.getElementById('consoleInput').value.toUpperCase();
-                if (cmd === 'RICH') { save.up += 1000000; updateUI(); }
-                else if (cmd === 'GIVEALL') {
-                    Object.keys(skins).concat(Object.keys(drones), Object.keys(perks)).forEach(k => { if(!save.owned.includes(k)) save.owned.push(k); });
-                    updateUI();
-                }
-                document.getElementById('consoleInput').value = '';
-                document.getElementById('console').style.display = 'none';
-            }
-        });
-
-        // FIXED: updateUI now only handles the screen, saveData handles the disk.
         function updateUI() {
             document.getElementById('upc').innerText = Math.floor(save.up).toLocaleString();
             document.getElementById('sc').innerText = Math.floor(score).toLocaleString();
             document.getElementById('hi').innerText = Math.floor(save.best).toLocaleString();
         }
 
+        function triggerEvent() {
+            if(eventActive || bossActive) return;
+            eventActive = true;
+            eventTimer = 10 * 60; // 10 seconds
+            const events = ['HYPER-COIN', 'GRID OVERLOAD', 'TIME DILATION', 'EMP BURST', 'AEGIS REGEN'];
+            const ev = events[Math.floor(Math.random()*events.length)];
+            const banner = document.getElementById('event-banner');
+            banner.innerText = ev; banner.style.display = 'block'; banner.style.color = '#f0f';
+            
+            if(ev === 'TIME DILATION') timeMod = 0.4;
+            if(ev === 'EMP BURST') enemies = [];
+            if(ev === 'AEGIS REGEN') p.hasShield = true;
+            
+            setTimeout(() => { 
+                banner.style.display = 'none'; 
+                eventActive = false; 
+                timeMod = 1;
+            }, 8000);
+        }
+
+        function triggerBoss() {
+            bossActive = true;
+            bossTimer = 20 * 60; // 20 seconds at 60fps
+            const banner = document.getElementById('event-banner');
+            banner.innerText = "BOSS PROTOCOL: SURVIVE!";
+            banner.style.display = 'block'; banner.style.color = '#ff0';
+            enemies = [];
+        }
+
+        function loop() {
+            if(!active) return;
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0,0,900,600);
+            
+            // Score Progression
+            if(!bossActive && score >= 25000 && lastEventScore < 25000) triggerBoss();
+            if(score - lastEventScore >= 2500) { triggerEvent(); lastEventScore = score; }
+
+            p.x += (p.tx - p.x) * p.speed * timeMod;
+            p.y += (p.ty - p.y) * p.speed * timeMod;
+
+            if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die("BOUNDARY BREACH");
+            
+            p.trail.push({x:p.x, y:p.y}); if(p.trail.length > 20) p.trail.shift();
+            p.trail.forEach((t, i) => {
+                ctx.fillStyle = skins[save.eqSkin] === 'rainbow' ? `hsl(${Date.now()/5 % 360}, 100%, 50%)` : skins[save.eqSkin];
+                ctx.globalAlpha = i / 20; ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Boss Rendering
+            if(bossActive) {
+                bossTimer--;
+                let pulse = Math.sin(Date.now()/200) * 20;
+                ctx.strokeStyle = '#ff0'; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.arc(450, 300, 100 + pulse, 0, Math.PI*2); ctx.stroke();
+                ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(450, 300, 40, 0, Math.PI*2); ctx.fill();
+                
+                // Gravity Well
+                let dist = Math.hypot(p.x-450, p.y-300);
+                if(dist < 150 + pulse) die("PULSE DISINTEGRATION");
+                p.x += (450 - p.x) * 0.02; p.y += (300 - p.y) * 0.02;
+
+                if(bossTimer <= 0) {
+                    bossActive = false; save.up += 100000;
+                    document.getElementById('event-banner').style.display = 'none';
+                    updateUI(); saveData();
+                }
+            }
+
+            // Drones
+            if(save.eqDrone) {
+                droneAngle += 0.15 * timeMod;
+                let dx = p.x + Math.cos(droneAngle) * 75, dy = p.y + Math.sin(droneAngle) * 75;
+                const dData = drones[save.eqDrone];
+                ctx.fillStyle = droneOnCooldown ? '#444' : '#fff';
+                ctx.fillRect(dx-7, dy-7, 14, 14);
+                if(!droneOnCooldown) {
+                    for(let i = enemies.length-1; i >= 0; i--) {
+                        if(Math.hypot(dx-enemies[i].x, dy-enemies[i].y) < dData.r) {
+                            ctx.strokeStyle = skins[save.eqSkin] === 'rainbow' ? '#fff' : skins[save.eqSkin];
+                            ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(enemies[i].x, enemies[i].y); ctx.stroke();
+                            enemies.splice(i,1); score += 50; updateUI();
+                            if(++droneShots >= dData.limit) {
+                                droneOnCooldown = true; cdStartTime = Date.now();
+                                setTimeout(() => { droneOnCooldown = false; droneShots = 0; }, dData.cd);
+                            } break;
+                        }
+                    }
+                }
+            }
+
+            // Enemy Spawning
+            let spawnChance = (eventActive && document.getElementById('event-banner').innerText === 'GRID OVERLOAD') ? 0.35 : 0.14;
+            if(!bossActive && Math.random() < spawnChance) enemies.push({x: Math.random()*880+10, y: -20, v: (3.5+score/5000)});
+            
+            enemies.forEach((en, i) => {
+                en.y += en.v * timeMod;
+                ctx.fillStyle = '#f0f'; ctx.fillRect(en.x - 11, en.y - 11, 22, 22);
+                if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
+                    if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
+                    else if(save.eqPerks.includes('ghost') && Math.random() < p.ghostMod) enemies.splice(i,1);
+                    else die("IMPACT DETECTED");
+                }
+                if(en.y > 650) { enemies.splice(i,1); score += 10; updateUI(); }
+            });
+
+            // Coin Spawning
+            let coinChance = (eventActive && document.getElementById('event-banner').innerText === 'HYPER-COIN') ? 0.4 : 0.05;
+            if(Math.random() < coinChance) coins.push({x: Math.random()*850+25, y: -20});
+            
+            coins.forEach((cn, i) => {
+                cn.y += 2.5 * timeMod;
+                if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 220) {
+                    cn.x += (p.x - cn.x) * 0.18; cn.y += (p.y - cn.y) * 0.18;
+                }
+                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); saveData(); }
+                ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 7, 0, Math.PI*2); ctx.fill();
+                if(cn.y > 620) coins.splice(i,1);
+            });
+            requestAnimationFrame(loop);
+        }
+
+        // --- Core Functions ---
+        function startGame() {
+            save.nick = document.getElementById('nickInput').value || "PILOT";
+            document.getElementById('startScreen').style.display = 'none';
+            score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300; lastEventScore = 0;
+            p.hasShield = save.eqPerks.includes('shield');
+            p.speed = save.eqPerks.includes('drift') ? 0.25 : 0.15;
+            bossActive = false; eventActive = false; active = true; loop();
+        }
+
+        function die(reason) {
+            active = false; saveData();
+            document.getElementById('titleText').innerText = reason;
+            document.getElementById('startScreen').style.display = 'flex';
+            document.getElementById('event-banner').style.display = 'none';
+            updateUI();
+        }
+
         function saveData() {
             if(score > save.best) save.best = Math.floor(score);
-            try {
-                localStorage.setItem('nd_v10_final', JSON.stringify(save));
-            } catch(e) {}
+            try { localStorage.setItem('nd_v10_final', JSON.stringify(save)); } catch(e) {}
         }
 
         function toggleShop() {
@@ -159,88 +268,19 @@
             p.ty = (e.clientY - r.top) * (600/r.height);
         });
 
-        function startGame() {
-            save.nick = document.getElementById('nickInput').value || "PILOT";
-            document.getElementById('startScreen').style.display = 'none';
-            score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300;
-            p.hasShield = save.eqPerks.includes('shield');
-            p.speed = save.eqPerks.includes('drift') ? 0.25 : 0.15;
-            droneShots = 0; droneOnCooldown = false; active = true; loop();
-        }
-
-        function die(reason) {
-            active = false;
-            saveData(); // Save score and highscore immediately on death
-            document.getElementById('titleText').innerText = reason || "CORE DESTROYED";
-            document.getElementById('startScreen').style.display = 'flex';
-            updateUI();
-        }
-
-        function loop() {
-            if(!active) return;
-            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0,0,900,600);
-            p.x += (p.tx - p.x) * p.speed; p.y += (p.ty - p.y) * p.speed;
-
-            if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die("BOUNDARY BREACH");
-            
-            p.trail.push({x:p.x, y:p.y}); if(p.trail.length > 20) p.trail.shift();
-            p.trail.forEach((t, i) => {
-                ctx.fillStyle = skins[save.eqSkin] === 'rainbow' ? `hsl(${Date.now()/5 % 360}, 100%, 50%)` : skins[save.eqSkin];
-                ctx.globalAlpha = i / 20; ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
-            });
-            ctx.globalAlpha = 1;
-
-            if(save.eqDrone) {
-                droneAngle += 0.15;
-                let dx = p.x + Math.cos(droneAngle) * 75, dy = p.y + Math.sin(droneAngle) * 75;
-                const dData = drones[save.eqDrone];
-                if(droneOnCooldown) {
-                    let pct = 1 - ((Date.now() - cdStartTime) / dData.cd);
-                    ctx.fillStyle = "#333"; ctx.fillRect(dx-15, dy-20, 30, 4);
-                    ctx.fillStyle = "#fff"; ctx.fillRect(dx-15, dy-20, 30 * pct, 4);
-                }
-                ctx.fillStyle = droneOnCooldown ? '#444' : '#fff';
-                ctx.fillRect(dx-7, dy-7, 14, 14);
-                if(!droneOnCooldown) {
-                    for(let i = enemies.length-1; i >= 0; i--) {
-                        if(Math.hypot(dx-enemies[i].x, dy-enemies[i].y) < dData.r) {
-                            ctx.strokeStyle = skins[save.eqSkin] === 'rainbow' ? '#fff' : skins[save.eqSkin];
-                            ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(enemies[i].x, enemies[i].y); ctx.stroke();
-                            enemies.splice(i,1); score += 50; updateUI();
-                            if(++droneShots >= dData.limit) {
-                                droneOnCooldown = true; cdStartTime = Date.now();
-                                setTimeout(() => { droneOnCooldown = false; droneShots = 0; }, dData.cd);
-                            } break;
-                        }
-                    }
-                }
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '`') {
+                const con = document.getElementById('console');
+                con.style.display = (con.style.display === 'block') ? 'none' : 'block';
+                if (con.style.display === 'block') document.getElementById('consoleInput').focus();
             }
+            if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
+                let cmd = document.getElementById('consoleInput').value.toUpperCase();
+                if (cmd === 'RICH') { save.up += 1000000; updateUI(); }
+                document.getElementById('consoleInput').value = '';
+            }
+        });
 
-            if(Math.random() < 0.14) enemies.push({x: Math.random()*880+10, y: -20, v: (3.5+score/5000)});
-            enemies.forEach((en, i) => {
-                en.y += en.v;
-                ctx.fillStyle = '#f0f'; ctx.fillRect(en.x - 11, en.y - 11, 22, 22);
-                if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
-                    if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
-                    else if(save.eqPerks.includes('ghost') && Math.random() < p.ghostMod) enemies.splice(i,1);
-                    else die("IMPACT DETECTED");
-                }
-                if(en.y > 650) { enemies.splice(i,1); score += 10; updateUI(); }
-            });
-
-            if(Math.random() < 0.05) coins.push({x: Math.random()*850+25, y: -20});
-            coins.forEach((cn, i) => {
-                cn.y += 2.5;
-                if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 220) {
-                    cn.x += (p.x - cn.x) * 0.18; cn.y += (p.y - cn.y) * 0.18;
-                }
-                if(Math.hypot(p.x-cn.x, p.y-cn.y) < 30) { save.up += 150; coins.splice(i,1); updateUI(); saveData(); }
-                ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 7, 0, Math.PI*2); ctx.fill();
-                if(cn.y > 620) coins.splice(i,1);
-            });
-            requestAnimationFrame(loop);
-        }
-        
         updateUI();
     </script>
 </body>
