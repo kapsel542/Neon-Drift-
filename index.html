@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: FINAL MOBILE FIX</title>
+    <title>Neon Drift: OVERDRIVE</title>
     <style>
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
         body { margin: 0; background: #010103; color: #0ff; font-family: 'Consolas', monospace; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        canvas { border: 2px solid #f00; background: #000; width: 95vw; height: auto; max-height: 70vh; aspect-ratio: 9/6; }
+        canvas { border: 5px solid #f00; background: #000; width: 95vw; height: auto; max-height: 75vh; aspect-ratio: 9/6; box-shadow: 0 0 20px #f00; }
         
         .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 2000; backdrop-filter: blur(8px); }
         .btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 15px 40px; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; margin-top: 15px; }
@@ -17,20 +17,26 @@
         .p-btn { padding: 10px 20px; border: 1px solid #444; background: #111; color: #666; font-family: inherit; }
         .p-btn.active { border-color: #0f0; color: #0f0; background: #002200; box-shadow: 0 0 10px #0f0; }
 
-        /* HUD */
         #ui { position: absolute; top: 10px; left: 10px; z-index: 100; pointer-events: none; }
         .nav-group { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 1100; }
-        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 6px 10px; font-size: 0.7rem; }
+        .nav-btn { background: #000; border: 1px solid #0ff; color: #0ff; padding: 6px 10px; font-size: 0.7rem; border-radius: 4px; }
 
-        /* Mobile Controls */
         #mobile-controls { position: absolute; bottom: 20px; width: 100%; display: none; justify-content: space-between; padding: 0 30px; align-items: center; z-index: 1500; }
-        #joy-zone { width: 130px; height: 130px; background: rgba(0,255,255,0.1); border: 2px solid #0ff; border-radius: 50%; position: relative; }
-        #joy-stick { width: 50px; height: 50px; background: #0ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #0ff; }
-        #act-btn { width: 90px; height: 90px; background: rgba(0,255,0,0.1); border: 4px solid #0f0; border-radius: 50%; color: #0f0; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        #joy-zone { width: 120px; height: 120px; background: rgba(0,255,255,0.1); border: 2px solid #0ff; border-radius: 50%; position: relative; }
+        #joy-stick { width: 45px; height: 45px; background: #0ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #0ff; }
+        #act-btn { width: 85px; height: 85px; background: rgba(0,255,0,0.1); border: 4px solid #0f0; border-radius: 50%; color: #0f0; font-weight: bold; display: flex; align-items: center; justify-content: center; }
 
-        .sidebar { position: absolute; top: 0; width: 280px; height: 100%; background: #05050f; padding: 20px; z-index: 1600; display:none; border: 1px solid #333; overflow-y: auto; }
-        #shop { left: 0; border-right: 3px solid #ff0; }
-        #itemStore { left: 0; border-right: 3px solid #0f0; } 
+        .sidebar { position: absolute; top: 0; width: 300px; height: 100%; background: #05050f; padding: 20px; z-index: 1600; display:none; border-left: 1px solid #333; border-right: 1px solid #333; overflow-y: auto; }
+        #shop { left: 0; }
+        #itemStore { left: 0; } 
+        #leaderboard { right: 0; border-left: 3px solid #0ff; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .card { background: #111; padding: 10px; border: 1px solid #333; font-size: 0.65rem; text-align: center; cursor: pointer; }
+        .card.owned { border-color: #555; color: #888; }
+        .card.active-item { border-color: #0ff; background: #002222; color: #fff; box-shadow: inset 0 0 10px #0ff; }
+
+        .lb-entry { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -40,8 +46,9 @@
     </div>
 
     <div class="nav-group">
-        <button class="nav-btn" onclick="openMenu('shop')">GEAR</button>
-        <button class="nav-btn" onclick="openMenu('itemStore')">WEAPON</button>
+        <button class="nav-btn" onclick="openMenu('shop')">SKINS/GEAR</button>
+        <button class="nav-btn" onclick="openMenu('itemStore')">WEAPONS</button>
+        <button class="nav-btn" onclick="openMenu('leaderboard')">TOP 100</button>
     </div>
 
     <div id="mobile-controls">
@@ -50,16 +57,30 @@
     </div>
 
     <div id="startScreen" class="overlay">
-        <h1 style="color:#0ff; margin:0;">NEON DRIFT</h1>
+        <h1 style="color:#0ff; margin:0; font-size: 3rem;">NEON DRIFT</h1>
+        <p style="font-size: 0.8rem; color: #f0f;">ID: <span id="pid"></span></p>
         <div class="platform-toggle">
-            <button id="pcB" class="p-btn active" onclick="setMode('pc')">PC</button>
+            <button id="pcB" class="p-btn active" onclick="setMode('pc')">DESKTOP</button>
             <button id="mobB" class="p-btn" onclick="setMode('mobile')">PHONE</button>
         </div>
-        <button class="btn" onclick="startGame()">INITIATE</button>
+        <button class="btn" onclick="startGame()">INITIATE DRIVE</button>
     </div>
 
-    <div id="shop" class="sidebar"><h3>PASSIVES</h3><div id="sg" style="display:grid; grid-template-columns:1fr 1fr; gap:5px;"></div></div>
-    <div id="itemStore" class="sidebar"><h3>WEAPONS</h3><div id="wg" style="display:grid; grid-template-columns:1fr 1fr; gap:5px;"></div></div>
+    <div id="shop" class="sidebar">
+        <h2 style="color:#ff0">SKINS & PASSIVES</h2>
+        <div id="skinGrid" class="grid"></div>
+        <div id="passGrid" class="grid"></div>
+    </div>
+
+    <div id="itemStore" class="sidebar">
+        <h2 style="color:#0f0">TACTICAL</h2>
+        <div id="wepGrid" class="grid"></div>
+    </div>
+
+    <div id="leaderboard" class="sidebar">
+        <h2 style="color:#0ff">TOP 100 PILOTS</h2>
+        <div id="lbList"></div>
+    </div>
 
     <canvas id="c"></canvas>
 
@@ -68,13 +89,41 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
+        if (!localStorage.getItem('driftNick')) {
+            localStorage.setItem('driftNick', "PILOT-" + Math.floor(1000 + Math.random() * 9000));
+        }
+
         let score = 0, up = parseInt(localStorage.getItem('driftUP')) || 0;
-        let active = false, isMobile = false, lastWep = 0;
-        let player = { x: 450, y: 300, tx: 450, ty: 300, trail: [] };
-        let owned = JSON.parse(localStorage.getItem('driftOwned')) || ['default'];
+        let active = false, isMobile = false, lastWep = 0, pilotId = localStorage.getItem('driftNick');
+        let player = { x: 450, y: 300, tx: 450, ty: 300, trail: [], color: '#0ff', size: 10 };
+        
+        let owned = JSON.parse(localStorage.getItem('driftOwned')) || ['default', 'cyan'];
         let passives = JSON.parse(localStorage.getItem('driftPassives')) || [];
         let curWep = localStorage.getItem('driftWeapon') || null;
-        let enemies = [], coins = [];
+        let curSkin = localStorage.getItem('driftSkin') || 'cyan';
+        let enemies = [], coins = [], timeFrozen = false;
+
+        document.getElementById('pid').innerText = pilotId;
+
+        const skins = [
+            {id:'cyan', n:'Neon', c:'#0ff', p:0},
+            {id:'fire', n:'Fire', c:'#f44', p:5000},
+            {id:'toxic', n:'Toxic', c:'#0f0', p:5000},
+            {id:'royal', n:'Royal', c:'#a0f', p:10000}
+        ];
+
+        const gear = [
+            {id:'drone', n:'Drone', p:8000},
+            {id:'magnet', n:'Magnet', p:4000},
+            {id:'shield', n:'Shield', p:12000},
+            {id:'ghost', n:'Ghost', p:15000} // Smaller hitbox
+        ];
+
+        const weps = [
+            {id:'nuke', n:'Nuke', p:10000},
+            {id:'gold', n:'Wealth', p:15000},
+            {id:'freeze', n:'Time Stop', p:20000}
+        ];
 
         function setMode(m) {
             isMobile = (m === 'mobile');
@@ -86,43 +135,39 @@
             document.getElementById('startScreen').style.display = 'none';
             if(isMobile) document.getElementById('mobile-controls').style.display = 'flex';
             player.x = 450; player.y = 300; player.tx = 450; player.ty = 300;
+            player.size = passives.includes('ghost') ? 6 : 10;
+            score = 0; enemies = []; coins = [];
             active = true;
             loop();
         }
 
-        // --- THE JOYSTICK ENGINE ---
-        const stick = document.getElementById('joy-stick');
-        const zone = document.getElementById('joy-zone');
-        let jHeld = false;
+        function endGame() {
+            active = false;
+            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
+            lb.push({name: pilotId, score: score});
+            lb.sort((a,b) => b.score - a.score);
+            localStorage.setItem('driftLB', JSON.stringify(lb.slice(0, 100)));
+            document.getElementById('startScreen').style.display = 'flex';
+        }
 
+        // --- CONTROLS ---
+        const stick = document.getElementById('joy-stick'), zone = document.getElementById('joy-zone');
+        let jHeld = false;
         zone.addEventListener('touchstart', (e) => { jHeld = true; updateJoy(e); });
         window.addEventListener('touchmove', (e) => { if(jHeld) updateJoy(e); }, { passive: false });
-        window.addEventListener('touchend', () => { 
-            jHeld = false; 
-            stick.style.left = '50%'; stick.style.top = '50%';
-        });
+        window.addEventListener('touchend', () => { jHeld = false; stick.style.left = '50%'; stick.style.top = '50%'; });
 
         function updateJoy(e) {
             e.preventDefault();
-            const r = zone.getBoundingClientRect();
-            const t = e.touches[0];
-            const cx = r.left + r.width/2;
-            const cy = r.top + r.height/2;
-            let dx = t.clientX - cx;
-            let dy = t.clientY - cy;
-            const d = Math.sqrt(dx*dx + dy*dy);
-            const max = r.width/2;
-
+            const r = zone.getBoundingClientRect(), t = e.touches[0];
+            const cx = r.left + r.width/2, cy = r.top + r.height/2;
+            let dx = t.clientX - cx, dy = t.clientY - cy;
+            const d = Math.sqrt(dx*dx + dy*dy), max = r.width/2;
             if(d > max) { dx *= max/d; dy *= max/d; }
-            stick.style.left = `calc(50% + ${dx}px)`;
-            stick.style.top = `calc(50% + ${dy}px)`;
-
-            // Movement Sensitivity
-            player.tx = player.x + (dx * 1.5);
-            player.ty = player.y + (dy * 1.5);
+            stick.style.left = `calc(50% + ${dx}px)`; stick.style.top = `calc(50% + ${dy}px)`;
+            player.tx = player.x + (dx * 1.8); player.ty = player.y + (dy * 1.8);
         }
 
-        // PC Mouse
         window.addEventListener('mousemove', (e) => {
             if(isMobile) return;
             const r = canvas.getBoundingClientRect();
@@ -133,41 +178,45 @@
         function triggerWeapon() {
             if(!active || !curWep || Date.now() - lastWep < 15000) return;
             if(curWep === 'nuke') enemies = [];
-            if(curWep === 'gold') for(let i=0; i<10; i++) coins.push({x:Math.random()*800, y:Math.random()*500});
+            if(curWep === 'gold') for(let i=0; i<15; i++) coins.push({x:Math.random()*800, y:Math.random()*500});
+            if(curWep === 'freeze') { timeFrozen = true; setTimeout(() => timeFrozen = false, 5000); }
             lastWep = Date.now();
         }
 
+        window.addEventListener('keydown', (e) => { if(e.key.toLowerCase()==='e') triggerWeapon(); });
+
+        // --- SHOP & LB ---
         function openMenu(id) {
             const el = document.getElementById(id);
             const showing = el.style.display === 'block';
             document.querySelectorAll('.sidebar').forEach(s => s.style.display='none');
             el.style.display = showing ? 'none' : 'block';
+            if(id === 'leaderboard') updateLB();
             updateShopUI();
         }
 
         function updateShopUI() {
             document.getElementById('upc').innerText = up;
-            const pList = [{id:'drone', n:'Drone'}, {id:'magnet', n:'Magnet'}, {id:'shield', n:'Shield'}];
-            document.getElementById('sg').innerHTML = pList.map(p => `
-                <div style="background:#222; padding:10px; border:1px solid ${passives.includes(p.id)?'#0ff':'#444'}" onclick="buyP('${p.id}')">
-                    ${p.n}<br>${passives.includes(p.id)?'ON':'5K'}
+            document.getElementById('skinGrid').innerHTML = skins.map(s => `
+                <div class="card ${curSkin===s.id?'active-item':''} ${owned.includes(s.id)?'':'owned'}" onclick="buy('${s.id}','skin',${s.p})">
+                    ${s.n}<br>${owned.includes(s.id)?'USE':s.p}
                 </div>`).join('');
-            const wList = [{id:'nuke', n:'Nuke'}, {id:'gold', n:'Wealth'}];
-            document.getElementById('wg').innerHTML = wList.map(w => `
-                <div style="background:#222; padding:10px; border:1px solid ${curWep===w.id?'#0f0':'#444'}" onclick="buyW('${w.id}')">
-                    ${w.n}<br>${owned.includes(w.id)?'OWNED':'10K'}
+            document.getElementById('passGrid').innerHTML = gear.map(g => `
+                <div class="card ${passives.includes(g.id)?'active-item':''} ${owned.includes(g.id)?'':'owned'}" onclick="buy('${g.id}','pass',${g.p})">
+                    ${g.n}<br>${owned.includes(g.id)?(passives.includes(g.id)?'ON':'OFF'):g.p}
+                </div>`).join('');
+            document.getElementById('wepGrid').innerHTML = weps.map(w => `
+                <div class="card ${curWep===w.id?'active-item':''} ${owned.includes(w.id)?'':'owned'}" onclick="buy('${w.id}','wep',${w.p})">
+                    ${w.n}<br>${owned.includes(w.id)?'EQUIP':w.p}
                 </div>`).join('');
         }
 
-        function buyP(id) {
-            if(passives.includes(id)) passives = passives.filter(x=>x!==id);
-            else if(up >= 5000) { up -= 5000; passives.push(id); }
-            save(); updateShopUI();
-        }
-
-        function buyW(id) {
-            if(owned.includes(id)) curWep = id;
-            else if(up >= 10000) { up -= 10000; owned.push(id); curWep = id; }
+        function buy(id, type, cost) {
+            if(!owned.includes(id)) { if(up >= cost) { up -= cost; owned.push(id); } else return; }
+            if(type==='skin') { curSkin = id; player.color = skins.find(s=>s.id===id).c; }
+            if(type==='pass') { if(passives.includes(id)) passives = passives.filter(x=>x!==id); else passives.push(id); }
+            if(type==='wep') curWep = id;
+            localStorage.setItem('driftSkin', curSkin);
             save(); updateShopUI();
         }
 
@@ -178,31 +227,39 @@
             localStorage.setItem('driftWeapon', curWep);
         }
 
+        function updateLB() {
+            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
+            document.getElementById('lbList').innerHTML = lb.map((e, i) => `
+                <div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>
+            `).join('');
+        }
+
+        // --- GAME LOOP ---
         function loop() {
             if(!active) return;
-            ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(0,0,900,600);
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0,0,900,600);
 
-            // Movement
-            player.x += (player.tx - player.x) * (isMobile ? 0.15 : 0.1);
-            player.y += (player.ty - player.y) * (isMobile ? 0.15 : 0.1);
-            player.x = Math.max(10, Math.min(890, player.x));
-            player.y = Math.max(10, Math.min(590, player.y));
+            // Lethal Walls Check
+            if(player.x < 5 || player.x > 895 || player.y < 5 || player.y > 595) endGame();
+
+            player.x += (player.tx - player.x) * (isMobile ? 0.18 : 0.12);
+            player.y += (player.ty - player.y) * (isMobile ? 0.18 : 0.12);
 
             // Trail
             player.trail.push({x:player.x, y:player.y});
-            if(player.trail.length > 15) player.trail.shift();
+            if(player.trail.length > 20) player.trail.shift();
             player.trail.forEach((t, i) => {
-                ctx.fillStyle = '#0ff'; ctx.globalAlpha = i/15;
-                ctx.beginPath(); ctx.arc(t.x, t.y, 8*(i/15), 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = player.color; ctx.globalAlpha = i/20;
+                ctx.beginPath(); ctx.arc(t.x, t.y, player.size*(i/20), 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
             // Enemies
-            if(Math.random() < 0.07) enemies.push({x: Math.random()*880, y:-20, v:3+(score/2000)});
+            if(!timeFrozen && Math.random() < 0.08) enemies.push({x: Math.random()*880, y:-20, v:3+(score/2000)});
             enemies.forEach((en, i) => {
-                en.y += en.v;
-                if(passives.includes('shield') && Math.hypot(player.x-en.x, player.y-en.y) < 70) en.y -= 5;
-                if(Math.hypot(player.x-en.x, player.y-en.y) < 18) { active = false; document.getElementById('startScreen').style.display='flex'; }
+                if(!timeFrozen) en.y += en.v;
+                if(passives.includes('shield') && Math.hypot(player.x-en.x, player.y-en.y) < 80) en.y -= 6;
+                if(Math.hypot(player.x-en.x, player.y-en.y) < (player.size + 8)) endGame();
                 if(en.y > 620) { enemies.splice(i,1); score += 10; document.getElementById('sc').innerText = score; }
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-8, en.y-8, 16, 16);
             });
@@ -210,8 +267,8 @@
             // Coins
             if(Math.random() < 0.02) coins.push({x: Math.random()*850, y: Math.random()*550});
             coins.forEach((cn, i) => {
-                if(passives.includes('magnet') && Math.hypot(player.x-cn.x, player.y-cn.y) < 150) {
-                    cn.x += (player.x-cn.x)*0.1; cn.y += (player.y-cn.y)*0.1;
+                if(passives.includes('magnet') && Math.hypot(player.x-cn.x, player.y-cn.y) < 160) {
+                    cn.x += (player.x-cn.x)*0.15; cn.y += (player.y-cn.y)*0.15;
                 }
                 if(Math.hypot(player.x-cn.x, player.y-cn.y) < 25) { coins.splice(i,1); up += 100; save(); document.getElementById('upc').innerText = up; }
                 ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 5, 0, Math.PI*2); ctx.fill();
@@ -219,6 +276,7 @@
 
             requestAnimationFrame(loop);
         }
+        updateShopUI();
     </script>
 </body>
 </html>
