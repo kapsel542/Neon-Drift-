@@ -3,88 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: REBORN</title>
+    <title>Neon Drift: LEGACY ASCENSION</title>
     <style>
-        :root { --neon: #0ff; --toxic: #0f0; --fire: #f00; --gold: #ff0; }
         * { box-sizing: border-box; touch-action: none; -webkit-user-select: none; }
-        body { margin: 0; background: #05050a; color: #fff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        body { margin: 0; background: #010105; color: #0ff; font-family: 'Courier New', monospace; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
         
-        /* CRT Effect */
-        body::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.1) 50%), linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03)); background-size: 100% 3px, 3px 100%; pointer-events: none; z-index: 9999; }
+        canvas { border: 3px solid #f0f; background: #000; width: 95vw; height: auto; max-height: 75vh; aspect-ratio: 9/6; box-shadow: 0 0 40px rgba(255,0,255,0.2); cursor: none; }
 
-        canvas { border: 4px solid var(--fire); background: #000; width: 95vw; height: auto; max-height: 75vh; aspect-ratio: 9/6; box-shadow: 0 0 20px var(--fire); }
+        #hud { position: absolute; top: 10px; width: 95vw; display: flex; justify-content: space-between; z-index: 5000; pointer-events: none; }
+        .stat-box { background: rgba(0,0,0,0.8); padding: 12px; border-left: 4px solid #0ff; pointer-events: none; font-weight: bold; }
+        .menu-bar { display: flex; gap: 10px; pointer-events: auto; }
+        .m-btn { background: #000; border: 2px solid #0ff; color: #0ff; padding: 10px 20px; cursor: pointer; font-family: inherit; font-weight: bold; }
+        .m-btn:hover { background: #0ff; color: #000; }
 
-        /* Global HUD */
-        #hud { position: absolute; top: 10px; width: 95vw; display: flex; justify-content: space-between; z-index: 1000; }
-        .stat-box { background: rgba(0,0,0,0.8); padding: 10px; border-left: 4px solid var(--neon); }
-        .nav-btns { display: flex; gap: 10px; }
-        .nav-btn { background: #000; border: 2px solid var(--neon); color: var(--neon); padding: 8px 15px; cursor: pointer; font-family: inherit; font-weight: bold; }
-        .nav-btn:hover { background: var(--neon); color: #000; }
+        .sidebar { position: absolute; right: 0; top: 0; width: 340px; height: 100%; background: #050510; border-left: 3px solid #0ff; z-index: 6000; padding: 25px; display: none; overflow-y: auto; box-shadow: -15px 0 35px #000; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 25px; }
+        .item { background: #111; border: 1px solid #333; padding: 12px; text-align: center; cursor: pointer; font-size: 0.7rem; }
+        .item.owned { color: #0f0; border-color: #0f0; }
+        .item.eq { background: #002200; border-color: #0f0; box-shadow: inset 0 0 10px #0f0; }
 
-        /* Menus */
-        .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 2000; }
-        .sidebar { position: absolute; right: 0; top: 0; width: 320px; height: 100%; background: #0a0a15; border-left: 2px solid var(--neon); padding: 20px; z-index: 3000; display: none; overflow-y: auto; }
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
+        .start-btn { background: #000; border: 3px solid #0f0; color: #0f0; padding: 20px 60px; font-size: 2rem; cursor: pointer; font-family: inherit; box-shadow: 0 0 20px rgba(0,255,0,0.3); }
+        input { background: #111; border: 2px solid #0ff; color: #0ff; padding: 15px; text-align: center; font-size: 1.2rem; margin: 20px; outline: none; width: 280px; }
         
-        input { background: #111; border: 2px solid var(--neon); color: var(--neon); padding: 12px; text-align: center; font-family: inherit; font-size: 1.2rem; margin-bottom: 15px; outline: none; }
-        .main-btn { background: #000; border: 3px solid var(--toxic); color: var(--toxic); padding: 15px 40px; font-size: 1.5rem; cursor: pointer; font-family: inherit; }
-
-        /* Shop Layout */
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .item-card { background: #151525; border: 1px solid #333; padding: 10px; text-align: center; cursor: pointer; font-size: 0.8rem; }
-        .item-card.equipped { border-color: var(--toxic); background: #002200; }
-        
-        /* Mobile Controls */
-        #controls { position: absolute; bottom: 20px; width: 95vw; display: none; justify-content: space-between; padding: 0 20px; z-index: 1500; }
-        #joy-zone { width: 120px; height: 120px; background: rgba(255,255,255,0.05); border: 2px solid var(--neon); border-radius: 50%; position: relative; }
-        #joy-stick { width: 50px; height: 50px; background: var(--neon); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px var(--neon); }
-        #act-btn { width: 80px; height: 80px; border: 4px solid var(--toxic); background: rgba(0,255,0,0.1); border-radius: 50%; color: var(--toxic); font-weight: bold; display: flex; align-items: center; justify-content: center; }
-
-        .lb-entry { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #222; font-size: 0.9rem; }
-        #event-banner { position: absolute; top: 25%; width: 100%; text-align: center; font-size: 3rem; font-weight: bold; color: #f0f; z-index: 1800; display: none; text-shadow: 0 0 20px #f0f; pointer-events: none; }
+        #alert { position: absolute; top: 120px; width: 100%; text-align: center; font-size: 2.5rem; color: #f0f; display: none; font-weight: bold; z-index: 3500; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="hud">
-        <div class="stat-box">
-            SCORE: <span id="sc">0</span><br>
-            <span style="color:var(--gold)">UP: <span id="upc">0</span></span>
-        </div>
-        <div class="nav-btns">
-            <button class="nav-btn" onclick="toggleMenu('shop')">GARAGE</button>
-            <button class="nav-btn" onclick="toggleMenu('leaderboard')">RANKS</button>
+        <div class="stat-box">SCORE: <span id="sc">0</span><br><span style="color:#ff0">UP: <span id="upc">0</span></span></div>
+        <div class="menu-bar">
+            <button class="m-btn" onclick="toggleShop()">SHOP</button>
         </div>
     </div>
 
-    <div id="event-banner">EVENT TRIGGERED</div>
-
-    <div id="startScreen" class="overlay">
-        <h1 style="color:var(--neon); font-size: 4rem; margin:0; text-shadow: 0 0 20px var(--neon);">NEON DRIFT</h1>
-        <p style="color: #666;">TYPE NICKNAME & SELECT MODE</p>
-        <input type="text" id="nickInput" placeholder="PILOT_ID" maxlength="12">
-        <div style="margin-bottom: 20px;">
-            <button class="nav-btn" id="pcMode" onclick="setMode('pc')">PC</button>
-            <button class="nav-btn" id="mobMode" onclick="setMode('mobile')">MOBILE</button>
-        </div>
-        <button class="main-btn" onclick="startGame()">INITIATE DRIVE</button>
-    </div>
+    <div id="alert">ASCENSION REACHED</div>
 
     <div id="shop" class="sidebar">
-        <h2 style="color:var(--gold)">GARAGE</h2>
-        <p>SKINS</p><div id="skinGrid" class="shop-grid"></div>
-        <p>WEAPONS</p><div id="wepGrid" class="shop-grid"></div>
-        <button class="nav-btn" style="width:100%; margin-top:20px;" onclick="toggleMenu('shop')">CLOSE</button>
+        <h2 style="color:#0ff; margin-top:0;">PILOT SHOP</h2>
+        <p style="color:#f0f; margin-bottom:5px;">DRONES</p>
+        <div id="droneContainer" class="shop-grid"></div>
+        <p style="color:#ff0; margin-bottom:5px;">PERKS</p>
+        <div id="perkContainer" class="shop-grid"></div>
+        <p style="color:#0f0; margin-bottom:5px;">SKINS</p>
+        <div id="skinContainer" class="shop-grid"></div>
+        <button class="m-btn" style="width:100%; border-color:#f00; color:#f00;" onclick="toggleShop()">EXIT SHOP</button>
     </div>
 
-    <div id="leaderboard" class="sidebar">
-        <h2 style="color:var(--neon)">TOP 100</h2>
-        <div id="lbList"></div>
-        <button class="nav-btn" style="width:100%; margin-top:20px;" onclick="toggleMenu('leaderboard')">CLOSE</button>
-    </div>
-
-    <div id="controls">
-        <div id="joy-zone"><div id="joy-stick"></div></div>
-        <div id="act-btn" onclick="useWeapon()">ACTIVATE</div>
+    <div id="startScreen" class="overlay">
+        <h1 style="color:#0ff; font-size: 4rem; margin:0; text-shadow: 0 0 20px #0ff;">NEON DRIFT</h1>
+        <p style="color:#f0f;">GOAL: 100,000 SCORE</p>
+        <input type="text" id="nickInput" placeholder="ENTER PILOT ID">
+        <button class="start-btn" onclick="startGame()">ENGAGE</button>
     </div>
 
     <canvas id="c"></canvas>
@@ -94,206 +65,161 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
-        // --- Persistent State ---
-        let pilot = {
-            nick: localStorage.getItem('driftNick') || "RECRUIT",
-            up: parseInt(localStorage.getItem('driftUP')) || 0,
-            owned: JSON.parse(localStorage.getItem('driftOwned')) || ['cyan'],
-            equipped: localStorage.getItem('driftSkin') || 'cyan',
-            weapon: localStorage.getItem('driftWeapon') || null
+        let save = JSON.parse(localStorage.getItem('nd_pro_save')) || {
+            up: 0, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: []
         };
 
-        const skins = {
-            'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'royal': '#a0f', 'gold': '#ff0', 'void': '#333'
+        const skinData = {'cyan': '#0ff', 'fire': '#f44', 'toxic': '#0f0', 'gold': '#ff0', 'royal': '#a0f'};
+        const droneData = {
+            'scout': {n: 'Scout Drone', p: 3000, r: 150},
+            'hunter': {n: 'Hunter Drone', p: 7000, r: 250},
+            'sniper': {n: 'Sniper Drone', p: 12000, r: 600}
         };
-        const items = [
-            {id: 'fire', n: 'Fire Skin', p: 5000, type: 'skin'},
-            {id: 'toxic', n: 'Toxic Skin', p: 5000, type: 'skin'},
-            {id: 'gold', n: 'Gold Skin', p: 15000, type: 'skin'},
-            {id: 'nuke', n: 'EMP Bomb', p: 10000, type: 'wep'},
-            {id: 'freeze', n: 'Time Warp', p: 12000, type: 'wep'}
-        ];
+        const perkData = {
+            'magnet': {n: 'Magnet', p: 4000},
+            'shield': {n: 'Shield', p: 6000},
+            'banker': {n: 'Banker', p: 8000}
+        };
 
-        // --- Game Variables ---
-        let active = false, score = 0, isMobile = false;
-        let player = { x: 450, y: 300, tx: 450, ty: 300, trail: [], size: 10 };
-        let enemies = [], coins = [], particles = [];
-        let eventActive = false, lastEventScore = 0;
-        let gameSpeed = 1;
+        let active = false, score = 0, enemies = [], coins = [], isEnding = false;
+        let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false };
+        let droneAngle = 0;
 
-        document.getElementById('nickInput').value = pilot.nick;
+        document.getElementById('nickInput').value = save.nick;
         updateUI();
 
-        function setMode(m) {
-            isMobile = (m === 'mobile');
-            document.getElementById('pcMode').style.background = !isMobile ? 'var(--neon)' : '#000';
-            document.getElementById('mobMode').style.background = isMobile ? 'var(--neon)' : '#000';
-        }
-
-        function toggleMenu(id) {
-            const el = document.getElementById(id);
-            el.style.display = el.style.display === 'block' ? 'none' : 'block';
-            if(id === 'shop') renderShop();
-            if(id === 'leaderboard') renderLB();
-        }
-
-        function startGame() {
-            pilot.nick = document.getElementById('nickInput').value || "PILOT";
-            save();
-            document.getElementById('startScreen').style.display = 'none';
-            if(isMobile) document.getElementById('controls').style.display = 'flex';
-            
-            // Reset
-            player.x = 450; player.y = 300; player.tx = 450; player.ty = 300;
-            score = 0; enemies = []; coins = []; lastEventScore = 0;
-            active = true;
-            loop();
-        }
-
-        function die() {
-            active = false;
-            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
-            lb.push({name: pilot.nick, score: score});
-            lb.sort((a,b) => b.score - a.score);
-            localStorage.setItem('driftLB', JSON.stringify(lb.slice(0, 100)));
-            document.getElementById('startScreen').style.display = 'flex';
-        }
-
-        // --- Systems ---
-        function save() {
-            localStorage.setItem('driftNick', pilot.nick);
-            localStorage.setItem('driftUP', pilot.up);
-            localStorage.setItem('driftOwned', JSON.stringify(pilot.owned));
-            localStorage.setItem('driftSkin', pilot.equipped);
-            localStorage.setItem('driftWeapon', pilot.weapon);
-            updateUI();
-        }
-
         function updateUI() {
-            document.getElementById('sc').innerText = score;
-            document.getElementById('upc').innerText = pilot.up;
+            localStorage.setItem('nd_pro_save', JSON.stringify(save));
+            document.getElementById('upc').innerText = save.up;
+            document.getElementById('sc').innerText = Math.floor(score);
+        }
+
+        function toggleShop() {
+            const s = document.getElementById('shop');
+            s.style.display = (s.style.display === 'block') ? 'none' : 'block';
+            if(s.style.display === 'block') renderShop();
         }
 
         function renderShop() {
-            document.getElementById('skinGrid').innerHTML = Object.keys(skins).map(k => `
-                <div class="item-card ${pilot.equipped === k ? 'equipped' : ''}" onclick="buy('${k}', 'skin', 0)">
-                    ${k.toUpperCase()}<br>${pilot.owned.includes(k) ? 'OWNED' : '5000'}
-                </div>`).join('');
-            document.getElementById('wepGrid').innerHTML = items.filter(i=>i.type==='wep').map(i => `
-                <div class="item-card ${pilot.weapon === i.id ? 'equipped' : ''}" onclick="buy('${i.id}', 'wep', ${i.p})">
-                    ${i.n}<br>${pilot.owned.includes(i.id) ? 'EQUIP' : i.p}
-                </div>`).join('');
+            const makeGrid = (data, type, eqKey) => Object.keys(data).map(k => {
+                const owned = save.owned.includes(k);
+                const eq = (type === 'perk') ? save.eqPerks.includes(k) : save[eqKey] === k;
+                return `<div class="item ${owned?'owned':''} ${eq?'eq':''}" onclick="buy('${k}','${type}',${data[k].p || 0},'${eqKey}')">
+                    ${data[k].n || k.toUpperCase()}<br>${owned ? (eq?'EQUIPPED':'SELECT') : data[k].p + ' UP'}
+                </div>`;
+            }).join('');
+
+            document.getElementById('skinContainer').innerHTML = makeGrid(skinData, 'skin', 'eqSkin');
+            document.getElementById('droneContainer').innerHTML = makeGrid(droneData, 'drone', 'eqDrone');
+            document.getElementById('perkContainer').innerHTML = makeGrid(perkData, 'perk', 'eqPerks');
         }
 
-        function buy(id, type, price) {
-            if(!pilot.owned.includes(id)) {
-                if(pilot.up >= price) {
-                    pilot.up -= price;
-                    pilot.owned.push(id);
-                } else return;
+        function buy(id, type, price, eqKey) {
+            if(!save.owned.includes(id)) {
+                if(save.up >= price) { save.up -= price; save.owned.push(id); } else return;
             }
-            if(type === 'skin') pilot.equipped = id;
-            if(type === 'wep') pilot.weapon = id;
-            save(); renderShop();
+            if(type === 'skin') save.eqSkin = id;
+            if(type === 'drone') save.eqDrone = (save.eqDrone === id) ? null : id;
+            if(type === 'perk') {
+                if(save.eqPerks.includes(id)) save.eqPerks = save.eqPerks.filter(x => x !== id);
+                else save.eqPerks.push(id);
+            }
+            updateUI(); renderShop();
         }
 
-        function renderLB() {
-            let lb = JSON.parse(localStorage.getItem('driftLB')) || [];
-            document.getElementById('lbList').innerHTML = lb.map((e, i) => `
-                <div class="lb-entry"><span>#${i+1} ${e.name}</span><span>${e.score}</span></div>
-            `).join('');
-        }
-
-        // --- Controls ---
-        const stick = document.getElementById('joy-stick'), zone = document.getElementById('joy-zone');
-        let jHeld = false;
-        zone.addEventListener('touchstart', () => jHeld = true);
-        window.addEventListener('touchmove', (e) => {
-            if(!jHeld) return;
-            const r = zone.getBoundingClientRect(), t = e.touches[0];
-            const cx = r.left + r.width/2, cy = r.top + r.height/2;
-            let dx = t.clientX - cx, dy = t.clientY - cy;
-            const d = Math.sqrt(dx*dx + dy*dy), max = r.width/2;
-            if(d > max) { dx *= max/d; dy *= max/d; }
-            stick.style.left = `calc(50% + ${dx}px)`; stick.style.top = `calc(50% + ${dy}px)`;
-            player.tx = player.x + (dx * 2.5); player.ty = player.y + (dy * 2.5);
-        });
-        window.addEventListener('touchend', () => { jHeld = false; stick.style.left='50%'; stick.style.top='50%'; });
-        window.addEventListener('mousemove', (e) => {
-            if(isMobile) return;
+        window.addEventListener('mousemove', e => {
             const r = canvas.getBoundingClientRect();
-            player.tx = (e.clientX - r.left) * (900 / r.width);
-            player.ty = (e.clientY - r.top) * (600 / r.height);
+            p.tx = (e.clientX - r.left) * (900/r.width);
+            p.ty = (e.clientY - r.top) * (600/r.height);
         });
 
-        // --- Events ---
-        function triggerEvent() {
-            const evts = ['BLOCK RUSH', 'COIN RAIN', 'GHOST MODE'];
-            const picked = evts[Math.floor(Math.random()*evts.length)];
-            const banner = document.getElementById('event-banner');
-            banner.innerText = picked; banner.style.display = 'block';
-            
-            if(picked === 'BLOCK RUSH') gameSpeed = 2;
-            if(picked === 'COIN RAIN') for(let i=0; i<40; i++) coins.push({x:Math.random()*800, y:Math.random()*500});
-            if(picked === 'GHOST MODE') eventActive = true;
-
-            setTimeout(() => {
-                banner.style.display = 'none';
-                gameSpeed = 1; eventActive = false;
-            }, 8000);
+        function startGame() {
+            save.nick = document.getElementById('nickInput').value || "PILOT";
+            document.getElementById('startScreen').style.display = 'none';
+            score = 0; enemies = []; coins = []; p.trail = [];
+            p.x = 450; p.y = 300; p.hasShield = save.eqPerks.includes('shield');
+            active = true; isEnding = false;
+            loop();
         }
 
-        // --- Main Loop ---
+        function die(victory = false) {
+            active = false;
+            if(victory) score = 1000000;
+            document.getElementById('startScreen').style.display = 'flex';
+            document.getElementById('startScreen').querySelector('h1').innerText = victory ? "ASCENDED" : "GAME OVER";
+            updateUI();
+        }
+
         function loop() {
             if(!active) return;
+
+            // 100k Win Condition
+            if(score >= 100000 && !isEnding) {
+                isEnding = true;
+                document.getElementById('alert').style.display = 'block';
+                setTimeout(() => die(true), 2000);
+            }
+
             ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.fillRect(0,0,900,600);
 
-            // Boundary Lethality
-            if(player.x < 5 || player.x > 895 || player.y < 5 || player.y > 595) die();
-
             // Movement
-            player.x += (player.tx - player.x) * (isMobile ? 0.2 : 0.12);
-            player.y += (player.ty - player.y) * (isMobile ? 0.2 : 0.12);
-
-            // Event Trigger (Every 1500)
-            if(score > 0 && score % 1500 === 0 && score !== lastEventScore) {
-                lastEventScore = score;
-                triggerEvent();
-            }
+            p.x += (p.tx - p.x) * 0.15;
+            p.y += (p.ty - p.y) * 0.15;
 
             // Trail
-            player.trail.push({x: player.x, y: player.y});
-            if(player.trail.length > 20) player.trail.shift();
-            player.trail.forEach((t, i) => {
-                ctx.fillStyle = skins[pilot.equipped];
-                ctx.globalAlpha = i/20;
-                ctx.beginPath(); ctx.arc(t.x, t.y, player.size * (i/20), 0, Math.PI*2); ctx.fill();
+            p.trail.push({x:p.x, y:p.y});
+            if(p.trail.length > 20) p.trail.shift();
+            p.trail.forEach((t, i) => {
+                ctx.fillStyle = skinData[save.eqSkin];
+                ctx.globalAlpha = i / 20;
+                ctx.beginPath(); ctx.arc(t.x, t.y, i * 0.8, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
-            // Enemies
-            if(Math.random() < (gameSpeed === 2 ? 0.2 : 0.07)) {
-                enemies.push({x: Math.random()*880, y: -20, v: (3 + score/2000) * gameSpeed});
+            // Core
+            ctx.shadowBlur = 15; ctx.shadowColor = skinData[save.eqSkin];
+            ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Drone
+            if(save.eqDrone) {
+                droneAngle += 0.1;
+                let dx = p.x + Math.cos(droneAngle) * 60, dy = p.y + Math.sin(droneAngle) * 60;
+                ctx.fillStyle = '#fff'; ctx.fillRect(dx-4, dy-4, 8, 8);
+                enemies.forEach((en, i) => {
+                    if(Math.hypot(dx-en.x, dy-en.y) < droneData[save.eqDrone].r) {
+                        ctx.strokeStyle = skinData[save.eqSkin]; ctx.beginPath(); 
+                        ctx.moveTo(dx,dy); ctx.lineTo(en.x, en.y); ctx.stroke();
+                        enemies.splice(i,1); score += 50; updateUI();
+                    }
+                });
             }
+
+            // Enemies (Blocks)
+            if(Math.random() < 0.1) enemies.push({x: Math.random()*900, y:-20, v: 3 + score/5000});
             enemies.forEach((en, i) => {
                 en.y += en.v;
-                if(!eventActive && Math.hypot(player.x-en.x, player.y-en.y) < player.size+8) die();
+                ctx.fillStyle = '#f0f'; ctx.fillRect(en.x-10, en.y-10, 20, 20);
+                if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
+                    if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
+                    else die();
+                }
                 if(en.y > 620) { enemies.splice(i,1); score += 10; updateUI(); }
-                ctx.fillStyle = '#f0f';
-                ctx.shadowBlur = 10; ctx.shadowColor = '#f0f';
-                ctx.fillRect(en.x-8, en.y-8, 16, 16);
-                ctx.shadowBlur = 0;
             });
 
             // Coins
-            if(Math.random() < 0.02) coins.push({x: Math.random()*850, y: Math.random()*550});
+            if(Math.random() < 0.03) coins.push({x: Math.random()*850, y: Math.random()*550});
             coins.forEach((cn, i) => {
-                if(Math.hypot(player.x-cn.x, player.y-cn.y) < 25) {
-                    coins.splice(i,1); pilot.up += 100; save();
+                let dist = Math.hypot(p.x-cn.x, p.y-cn.y);
+                if(save.eqPerks.includes('magnet') && dist < 180) {
+                    cn.x += (p.x - cn.x) * 0.15; cn.y += (p.y - cn.y) * 0.15;
                 }
-                ctx.fillStyle = 'var(--gold)';
-                ctx.beginPath(); ctx.arc(cn.x, cn.y, 5, 0, Math.PI*2); ctx.fill();
+                if(dist < 25) {
+                    save.up += (save.eqPerks.includes('banker') ? 200 : 100);
+                    coins.splice(i,1); updateUI();
+                }
+                ctx.fillStyle = '#ff0'; ctx.beginPath(); ctx.arc(cn.x, cn.y, 6, 0, Math.PI*2); ctx.fill();
             });
 
             requestAnimationFrame(loop);
