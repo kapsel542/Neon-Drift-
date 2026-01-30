@@ -103,7 +103,7 @@
         function triggerBoss() {
             if (bossActive) return;
             bossActive = true;
-            bossTimer = 1200; 
+            bossTimer = 1200; // 20 seconds
             const banner = document.getElementById('event-banner');
             banner.innerText = "BOSS PHASE: TITAN BLOCKS!";
             banner.style.display = 'block'; banner.style.color = '#f00';
@@ -113,7 +113,7 @@
         function loop() {
             if(!active) return;
 
-            // Background Pulse Logic
+            // Background Boss Pulse
             if(bossActive) {
                 ctx.fillStyle = `rgba(${30 + Math.sin(Date.now()/150)*20}, 0, 0, 0.3)`;
             } else {
@@ -121,8 +121,8 @@
             }
             ctx.fillRect(0,0,900,600);
             
-            // Progression
-            if(!bossActive && score >= 25000 && (score % 25000 < 500) && score - lastEventScore > 5000) {
+            // Auto Trigger Boss every 25k
+            if(!bossActive && score > 0 && score % 25000 === 0) {
                  triggerBoss();
             }
             if(!bossActive && score - lastEventScore >= 2500) { triggerEvent(); lastEventScore = score; }
@@ -171,7 +171,7 @@
                 }
             }
 
-            // ENEMY SPAWNING (Boss blocks are 3x size and 2x speed)
+            // Boss Spawning (3x size, 2x speed)
             let spawnRate = bossActive ? 0.25 : (eventActive ? 0.35 : 0.14);
             if(Math.random() < spawnRate) {
                 enemies.push({
@@ -184,7 +184,7 @@
 
             enemies.forEach((en, i) => {
                 en.y += en.v * timeMod;
-                let sz = en.isBoss ? 66 : 22; // 3x Bigger for Boss
+                let sz = en.isBoss ? 66 : 22;
                 ctx.fillStyle = en.isBoss ? '#f00' : '#f0f'; 
                 ctx.fillRect(en.x - sz/2, en.y - sz/2, sz, sz);
                 
