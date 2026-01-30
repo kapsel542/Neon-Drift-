@@ -77,7 +77,7 @@
         const perks = { 'magnet': {n:'Mag-Link', p:15000}, 'shield': {n:'Aegis', p:30000}, 'ghost': {n:'Phase', p:50000}, 'frenzy': {n:'Overclock', p:80000}, 'static': {n:'EMP', p:100000}, 'luck': {n:'Miner', p:120000}, 'drift': {n:'Speed', p:150000} };
 
         let active = false, score = 0, enemies = [], coins = [], lastEventScore = 0;
-        let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6, speed: 0.15, ghostMod: 0.05 };
+        let p = { x: 450, y: 300, tx: 450, ty: 300, trail: [], hasShield: false, size: 0.6, speed: 0.15, ghostMod: 0.05, god: false };
         let droneAngle = 0, droneShots = 0, droneOnCooldown = false, cdStartTime = 0;
         let bossActive = false, bossTimer = 0, eventActive = false, eventTimer = 0, timeMod = 1;
 
@@ -90,26 +90,18 @@
         function triggerEvent() {
             if(eventActive || bossActive) return;
             eventActive = true;
-            eventTimer = 10 * 60; // 10 seconds
             const events = ['HYPER-COIN', 'GRID OVERLOAD', 'TIME DILATION', 'EMP BURST', 'AEGIS REGEN'];
             const ev = events[Math.floor(Math.random()*events.length)];
             const banner = document.getElementById('event-banner');
             banner.innerText = ev; banner.style.display = 'block'; banner.style.color = '#f0f';
-            
             if(ev === 'TIME DILATION') timeMod = 0.4;
             if(ev === 'EMP BURST') enemies = [];
             if(ev === 'AEGIS REGEN') p.hasShield = true;
-            
-            setTimeout(() => { 
-                banner.style.display = 'none'; 
-                eventActive = false; 
-                timeMod = 1;
-            }, 8000);
+            setTimeout(() => { banner.style.display = 'none'; eventActive = false; timeMod = 1; }, 8000);
         }
 
         function triggerBoss() {
-            bossActive = true;
-            bossTimer = 20 * 60; // 20 seconds at 60fps
+            bossActive = true; bossTimer = 20 * 60;
             const banner = document.getElementById('event-banner');
             banner.innerText = "BOSS PROTOCOL: SURVIVE!";
             banner.style.display = 'block'; banner.style.color = '#ff0';
@@ -119,44 +111,34 @@
         function loop() {
             if(!active) return;
             ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0,0,900,600);
-            
-            // Score Progression
             if(!bossActive && score >= 25000 && lastEventScore < 25000) triggerBoss();
             if(score - lastEventScore >= 2500) { triggerEvent(); lastEventScore = score; }
 
             p.x += (p.tx - p.x) * p.speed * timeMod;
             p.y += (p.ty - p.y) * p.speed * timeMod;
 
-            if(p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595) die("BOUNDARY BREACH");
+            if(!p.god && (p.x < 5 || p.x > 895 || p.y < 5 || p.y > 595)) die("BOUNDARY BREACH");
             
             p.trail.push({x:p.x, y:p.y}); if(p.trail.length > 20) p.trail.shift();
             p.trail.forEach((t, i) => {
-                ctx.fillStyle = skins[save.eqSkin] === 'rainbow' ? `hsl(${Date.now()/5 % 360}, 100%, 50%)` : skins[save.eqSkin];
-                ctx.globalAlpha = i / 20; ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
+                let color = skins[save.eqSkin] === 'rainbow' ? `hsl(${Date.now()/5 % 360}, 100%, 50%)` : skins[save.eqSkin];
+                if(p.god && Date.now() % 200 < 100) color = "#fff";
+                ctx.fillStyle = color; ctx.globalAlpha = i / 20; ctx.beginPath(); ctx.arc(t.x, t.y, i * p.size, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
-            // Boss Rendering
             if(bossActive) {
                 bossTimer--;
                 let pulse = Math.sin(Date.now()/200) * 20;
                 ctx.strokeStyle = '#ff0'; ctx.lineWidth = 5;
                 ctx.beginPath(); ctx.arc(450, 300, 100 + pulse, 0, Math.PI*2); ctx.stroke();
                 ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(450, 300, 40, 0, Math.PI*2); ctx.fill();
-                
-                // Gravity Well
                 let dist = Math.hypot(p.x-450, p.y-300);
-                if(dist < 150 + pulse) die("PULSE DISINTEGRATION");
+                if(!p.god && dist < 150 + pulse) die("PULSE DISINTEGRATION");
                 p.x += (450 - p.x) * 0.02; p.y += (300 - p.y) * 0.02;
-
-                if(bossTimer <= 0) {
-                    bossActive = false; save.up += 100000;
-                    document.getElementById('event-banner').style.display = 'none';
-                    updateUI(); saveData();
-                }
+                if(bossTimer <= 0) { bossActive = false; save.up += 100000; document.getElementById('event-banner').style.display = 'none'; updateUI(); saveData(); }
             }
 
-            // Drones
             if(save.eqDrone) {
                 droneAngle += 0.15 * timeMod;
                 let dx = p.x + Math.cos(droneAngle) * 75, dy = p.y + Math.sin(droneAngle) * 75;
@@ -178,14 +160,13 @@
                 }
             }
 
-            // Enemy Spawning
             let spawnChance = (eventActive && document.getElementById('event-banner').innerText === 'GRID OVERLOAD') ? 0.35 : 0.14;
             if(!bossActive && Math.random() < spawnChance) enemies.push({x: Math.random()*880+10, y: -20, v: (3.5+score/5000)});
             
             enemies.forEach((en, i) => {
                 en.y += en.v * timeMod;
                 ctx.fillStyle = '#f0f'; ctx.fillRect(en.x - 11, en.y - 11, 22, 22);
-                if(Math.hypot(p.x-en.x, p.y-en.y) < 20) {
+                if(!p.god && Math.hypot(p.x-en.x, p.y-en.y) < 20) {
                     if(p.hasShield) { p.hasShield = false; enemies.splice(i,1); }
                     else if(save.eqPerks.includes('ghost') && Math.random() < p.ghostMod) enemies.splice(i,1);
                     else die("IMPACT DETECTED");
@@ -193,10 +174,8 @@
                 if(en.y > 650) { enemies.splice(i,1); score += 10; updateUI(); }
             });
 
-            // Coin Spawning
             let coinChance = (eventActive && document.getElementById('event-banner').innerText === 'HYPER-COIN') ? 0.4 : 0.05;
             if(Math.random() < coinChance) coins.push({x: Math.random()*850+25, y: -20});
-            
             coins.forEach((cn, i) => {
                 cn.y += 2.5 * timeMod;
                 if(save.eqPerks.includes('magnet') && Math.hypot(p.x-cn.x, p.y-cn.y) < 220) {
@@ -209,14 +188,13 @@
             requestAnimationFrame(loop);
         }
 
-        // --- Core Functions ---
         function startGame() {
             save.nick = document.getElementById('nickInput').value || "PILOT";
             document.getElementById('startScreen').style.display = 'none';
             score = 0; enemies = []; coins = []; p.trail = []; p.x = 450; p.y = 300; lastEventScore = 0;
             p.hasShield = save.eqPerks.includes('shield');
             p.speed = save.eqPerks.includes('drift') ? 0.25 : 0.15;
-            bossActive = false; eventActive = false; active = true; loop();
+            p.god = false; bossActive = false; eventActive = false; active = true; loop();
         }
 
         function die(reason) {
@@ -277,6 +255,7 @@
             if (e.key === 'Enter' && document.activeElement.id === 'consoleInput') {
                 let cmd = document.getElementById('consoleInput').value.toUpperCase();
                 if (cmd === 'RICH') { save.up += 1000000; updateUI(); }
+                if (cmd === 'GOD') { p.god = !p.god; console.log("GOD_MODE: " + p.god); }
                 document.getElementById('consoleInput').value = '';
             }
         });
