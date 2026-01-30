@@ -26,7 +26,10 @@
 <body>
 
     <div id="hud">
-        <div class="stat-box">SCORE: <span id="sc">0</span><br><span style="color:#ff0">UP: <span id="upc">0</span></span></div>
+        <div class="stat-box">
+            SCORE: <span id="sc">0</span> | BEST: <span id="hi" style="color:#0f0">0</span><br>
+            <span style="color:#ff0">UP: <span id="upc">0</span></span>
+        </div>
         <button class="m-btn" onclick="toggleShop()">SHOP</button>
     </div>
 
@@ -54,8 +57,9 @@
         const ctx = canvas.getContext('2d');
         canvas.width = 900; canvas.height = 600;
 
+        // Added 'best' to the save object
         let save = JSON.parse(localStorage.getItem('nd_v10_final')) || {
-            up: 10000, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: []
+            up: 10000, nick: "PILOT", owned: ['cyan'], eqSkin: 'cyan', eqDrone: null, eqPerks: [], best: 0
         };
 
         const skins = {
@@ -103,9 +107,13 @@
         });
 
         function updateUI() {
+            // Check if current score beat high score
+            if(score > save.best) save.best = Math.floor(score);
+            
             localStorage.setItem('nd_v10_final', JSON.stringify(save));
             document.getElementById('upc').innerText = save.up.toLocaleString();
             document.getElementById('sc').innerText = Math.floor(score).toLocaleString();
+            document.getElementById('hi').innerText = save.best.toLocaleString();
         }
 
         function toggleShop() {
@@ -157,7 +165,7 @@
             active = false;
             document.getElementById('titleText').innerText = reason || "CORE DESTROYED";
             document.getElementById('startScreen').style.display = 'flex';
-            updateUI();
+            updateUI(); // Final save on death
         }
 
         function loop() {
@@ -225,6 +233,9 @@
             });
             requestAnimationFrame(loop);
         }
+        
+        // Initial UI load
+        updateUI();
     </script>
 </body>
 </html>
