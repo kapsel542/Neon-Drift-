@@ -210,7 +210,7 @@
         function triggerBoss() {
             if (bossActive) return;
             bossActive = true;
-            bossTimer = 1200; 
+            bossTimer = 600; 
             const banner = document.getElementById('event-banner');
             banner.innerText = "BOSS PHASE: THE BEAST!";
             banner.style.display = 'block'; banner.style.color = '#ff0000';
@@ -253,11 +253,11 @@
             else ctx.fillStyle = bossActive ? 'rgba(50,0,0,0.3)' : 'rgba(0,0,0,0.3)';
             ctx.fillRect(0,0,900,600);
             
-            if(!bossActive && score >= lastBossScore + 50000) { 
+            if(!bossActive && score >= lastBossScore + 100000) { 
                 triggerBoss(); 
                 lastBossScore = score; 
             }
-            if(!bossActive && score >= lastEventScore + 2500) { 
+            if(!bossActive && score >= lastEventScore + 5000) { 
                 triggerEvent(); 
                 lastEventScore = score; 
             }
@@ -325,7 +325,7 @@
             }
 
             if(Math.random() < (bossActive ? 0.25 : 0.14)) {
-                enemies.push({ x: Math.random()*880+10, y: -100, v: (3.5+score/5000) * (bossActive ? 1.7 : 1), isBoss: bossActive });
+                enemies.push({ x: Math.random()*880+10, y: -100, v: (3.5+score/5000) * (bossActive ? 1.4 : 1), isBoss: bossActive });
             }
 
             enemies.forEach((en, i) => {
