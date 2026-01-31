@@ -97,6 +97,13 @@
             ld_wealth: []
         };
 
+        // Po załadowaniu strony wpisz zapisany nick do okienka
+window.onload = () => {
+    if(save.nick) {
+        document.getElementById('nickInput').value = save.nick;
+    }
+};
+
         try {
             const data = localStorage.getItem('nd_v10_final');
             if(data) {
