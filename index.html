@@ -9,7 +9,7 @@
 *{box-sizing:border-box;touch-action:none;-webkit-user-select:none}
 body{margin:0;background:var(--bg);color:var(--accent);font-family:'Courier New',monospace;overflow:hidden;display:flex;justify-content:center;align-items:center;height:100vh}
 canvas{border:5px solid var(--accent);background:#000;width:95vw;height:auto;max-height:75vh;aspect-ratio:9/6;box-shadow:0 0 30px rgba(255,102,0,0.4);cursor:none}
-#hud{position:absolute;top:10px;width:95vw;display:flex;justify-content:space-between;z-index:5000;pointer-events:none}
+#hud{position:absolute;top:10px;width:95vw;display:flex;justify-content:space-between;z-index:5000;pointer-events:none;gap:12px}
 .stat-box{background:rgba(0,0,0,0.9);padding:12px;border:2px solid var(--accent);border-left:8px solid var(--accent);pointer-events:none;color:var(--muted)}
 .m-btn{background:var(--accent);border:none;color:#000;padding:10px 20px;cursor:pointer;font-family:inherit;font-weight:900;pointer-events:auto;margin-left:5px;clip-path:polygon(10% 0,100% 0,90% 100%,0 100%);transition:transform 280ms cubic-bezier(.2,.9,.2,1),background 120ms}
 .m-btn:hover{transform:translateY(-3px);background:#fff}
@@ -28,7 +28,7 @@ input{background:#111;border:2px solid var(--accent);color:var(--accent);padding
 #console{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.9);padding:5px;display:none;z-index:9999;border:1px solid var(--accent)}
 #console input{background:transparent;border:none;color:var(--accent);font-family:'Courier New',monospace;padding:5px;width:250px;font-size:0.8rem;text-align:center;border-bottom:1px solid var(--accent);outline:none}
 #event-banner{position:absolute;top:100px;width:100%;text-align:center;font-size:3rem;font-weight:900;text-shadow:0 0 20px var(--danger);pointer-events:none;display:none;z-index:7000;font-style:italic;color:var(--accent)}
-#ld-screen{display:none;position:absolute;inset:0;background:var(--bg);z-index:8000;flex-direction:column;align-items:center;padding:40px;overflow-y:auto}
+/* Leaderboard styles kept but we remove the DOM for leaderboard entirely */
 .ld-table{width:100%;max-width:600px;border-collapse:collapse;margin-top:20px;color:#fff}
 .ld-table th{color:var(--accent);border-bottom:3px solid var(--accent);padding:10px;text-align:left}
 .ld-table td{padding:8px;border-bottom:1px solid #222;font-size:0.9rem}
@@ -37,7 +37,8 @@ input{background:#111;border:2px solid var(--accent);color:var(--accent);padding
 .theme-btn{width:36px;height:36px;border-radius:8px;border:2px solid #222;cursor:pointer}
 .small-note{font-size:0.75rem;color:#bbb;margin-bottom:8px}
 
-/* Rainbow UI support (used when body.dataset.rainbow === 'true') */
+/* tiny toast */
+#flex-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18vh;background:#111;padding:10px 18px;border:2px solid var(--accent);color:var(--accent);border-radius:8px;z-index:10000;display:none}
 .rainbow-accent {
   background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
   -webkit-background-clip: text;
@@ -54,12 +55,21 @@ input{background:#111;border:2px solid var(--accent);color:var(--accent);padding
 <div id="event-banner">Chaos mode</div>
 
 <div id="hud">
-  <div class="stat-box">
+  <div class="stat-box" aria-hidden="true">
     SCORE: <span id="sc">0</span> | BEST: <span id="hi" style="color:var(--accent)">0</span><br>
     <span style="color:#fff">UP: <span id="upc">0</span></span><br>
     <span style="color:#bbb">MULT: <span id="mult">x1</span></span>
   </div>
-  <div>
+
+  <!-- Flex Score panel (clickable) -->
+  <div class="stat-box" id="flexBox" style="pointer-events:auto;cursor:pointer;min-width:190px;text-align:left" title="Kliknij, aby skopiować FLEX SCORE do Discorda" onclick="copyFlexScore()">
+    <div style="font-weight:900;color:var(--accent);margin-bottom:6px">FLEX SCORE</div>
+    😊 <span id="flexNick" style="color:#fff;font-weight:700">PILOT</span><br>
+    ⭐ BEST: <span id="flexBest" style="color:var(--accent)">0</span><br>
+    💰 CASH: <span id="flexCash" style="color:var(--accent-2)">0</span>
+  </div>
+
+  <div style="display:flex;align-items:center;pointer-events:auto">
     <button class="m-btn" onclick="toggleShop()">Neon SHOP</button>
   </div>
 </div>
@@ -85,28 +95,17 @@ input{background:#111;border:2px solid var(--accent);color:var(--accent);padding
   <input type="text" id="nickInput" placeholder="PILOT_ID" maxlength="15"/>
   <div style="display:flex;flex-wrap:wrap;justify-content:center;">
     <button class="start-btn" onclick="startGame()">ENGAGE</button>
-    <button class="start-btn" style="border-color:#fff;color:#fff;" onclick="toggleLeaderboard()">RECORDS</button>
+    <!-- RECORDS -> replaced by FLEX copy action -->
+    <button class="start-btn" style="border-color:#fff;color:#fff;" onclick="copyFlexScore()">FLEX</button>
   </div>
 </div>
 
-<div id="ld-screen">
-  <h1 style="color:var(--accent);font-size:3rem;text-shadow:0 0 20px var(--accent);">GLOBAL ARCHIVE 3.0</h1>
-  <div style="display:flex;gap:30px;width:100%;max-width:900px;justify-content:center;">
-    <div style="flex:1;background:rgba(255,102,0,0.03);padding:15px;border:1px solid #333;">
-      <h3 style="color:var(--accent);text-align:center;">LEGENDS (SCORE)</h3>
-      <table class="ld-table" id="scoreTable"></table>
-    </div>
-    <div style="flex:1;background:rgba(0,255,68,0.03);padding:15px;border:1px solid #333;">
-      <h3 style="color:var(--accent-2);text-align:center;">TYCOONS (CASH)</h3>
-      <table class="ld-table" id="wealthTable"></table>
-    </div>
-  </div>
-  <div style="margin-top:12px;color:#bbb;font-size:0.9rem;">Update notes: boss = 5s, kills: 150 (z dronem) / 10 (bez broni). Multipliery zbalansowane. Nowe bronie, perki i eventy!</div>
-  <button class="start-btn" style="margin-top:20px;border-color:var(--accent);color:var(--accent);" onclick="toggleLeaderboard()">RETURN TO COCKPIT</button>
-</div>
+<!-- removed leaderboard DOM (GLOBAL ARCHIVE) entirely -->
 
 <div id="console"><input type="text" id="consoleInput" placeholder="ROOT_ACCESS_..."></div>
 <canvas id="c"></canvas>
+
+<div id="flex-toast">FLEX COPIED — wklej na Discord</div>
 
 <script>
 // ---------- CORE / SAVE ----------
@@ -210,10 +209,11 @@ const cores = {
     'apex':    { n:'Apex Core', p:25000000000, m:8, desc:'8x All (ULTIMATE)' }
 };
 
-const BIN_ID = '697e4ee7ae596e708f073a0d';
-const API_KEY = '$2a$10$3jabLHeZU/XWliuz9En2cu22tIWQSiQFJE5J3HQmgGF6eO09CkP52';
+// disable cloud sync by leaving these blank
+const BIN_ID = '';
+const API_KEY = '';
 
-// ---------- CLOUD ----------
+// ---------- CLOUD (no-op when BIN_ID/API_KEY blank) ----------
 async function syncCloud(){
   try{
     if(!BIN_ID || !API_KEY) return;
@@ -231,7 +231,6 @@ async function fetchCloud(){
     const data = await res.json();
     save.ld_scores = data.record.scores || [];
     save.ld_wealth = data.record.wealth || [];
-    renderLeaderboards();
   }catch(e){ console.log("Cloud Fetch Error") }
 }
 
@@ -303,6 +302,71 @@ function updateUI(){
   // rainbow accent effect on some texts
   const title = document.getElementById('titleText');
   if(document.body.dataset.rainbow === 'true'){ title.classList.add('rainbow-accent') } else title.classList.remove('rainbow-accent');
+
+  // update flex score UI
+  updateFlexScore();
+}
+
+// ---------- FLEX SCORE (new system) ----------
+function updateFlexScore(){
+  const nick = save.nick || "PILOT";
+  const best = save.best || 0;
+  const cash = save.up || 0;
+  document.getElementById('flexNick').innerText = nick;
+  document.getElementById('flexBest').innerText = Math.floor(best).toLocaleString();
+  document.getElementById('flexCash').innerText = Math.floor(cash).toLocaleString();
+}
+
+// copy to clipboard and show mini-toast
+function copyFlexScore(){
+  const nick = save.nick || "PILOT";
+  const best = Math.floor(save.best || 0).toLocaleString();
+  const cash = Math.floor(save.up || 0).toLocaleString();
+
+  const text =
+`🔥 **NEON DRIFT — FLEX** 🔥
+😊 ${nick}
+⭐ BEST: ${best}
+💰 CASH: ${cash} UP
+
+> #NeonDrift #Flex`;
+
+  // clipboard
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      playPurchase();
+      showFlexToast("FLEX skopiowany — wklej na Discord");
+    }).catch(err=>{
+      // fallback
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text){
+  // fallback textarea copy
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand('copy');
+    playPurchase();
+    showFlexToast("FLEX skopiowany (fallback)");
+  }catch(e){
+    alert("Nie udało się skopiować automatycznie. Skopiuj ręcznie:\n\n"+text);
+  }
+  document.body.removeChild(ta);
+}
+
+function showFlexToast(msg){
+  const t = document.getElementById('flex-toast');
+  t.innerText = msg;
+  t.style.display = 'block';
+  t.style.opacity = 1;
+  setTimeout(()=>{ t.style.transition = 'opacity 400ms'; t.style.opacity = 0; setTimeout(()=>{ t.style.display='none'; t.style.transition=''; },420); }, 1300);
 }
 
 // ---------- SHOP: tabs ----------
@@ -489,10 +553,6 @@ function triggerBoss(){
   playEvent('boss');
   enemies = [];
 }
-
-// ---------- LEADERBOARDS (unchanged) ----------
-function toggleLeaderboard(){ const l=document.getElementById('ld-screen'); l.style.display = (l.style.display==='flex') ? 'none' : 'flex'; if(l.style.display==='flex') fetchCloud(); }
-function renderLeaderboards(){ const st=document.getElementById('scoreTable'), wt=document.getElementById('wealthTable'); let scoreData=[...save.ld_scores].sort((a,b)=>b.v-a.v).slice(0,10); let wealthData=[...save.ld_wealth].sort((a,b)=>b.v-a.v).slice(0,10); let sh=`<tr><th>RANK</th><th>PILOT</th><th>SCORE</th></tr>`; scoreData.forEach((r,i)=>{ let color=i===0?"var(--accent)":"#fff"; let rankName=i===0?"👑":i+1; sh+=`<tr style="color:${color}"><td>${rankName}</td><td>${r.n}</td><td>${r.v.toLocaleString()}</td></tr>` }); st.innerHTML=sh; let wh=`<tr><th>RANK</th><th>PILOT</th><th>WEALTH</th></tr>`; wealthData.forEach((r,i)=>{ let color=i===0?"var(--accent-2)":"#ccc"; wh+=`<tr style="color:${color}"><td>${i+1}</td><td>${r.n}</td><td>$${r.v.toLocaleString()}</td></tr>` }); wt.innerHTML=wh; }
 
 // ---------- MAIN LOOP (trail drawing updated to respect shapes) ----------
 function loop(){
@@ -718,7 +778,7 @@ async function die(reason){
   let existingWealthIdx = save.ld_wealth.findIndex(r=>r.n===save.nick);
   if(existingWealthIdx !== -1){ save.ld_wealth[existingWealthIdx].v = currentWealth; } else save.ld_wealth.push({ n: save.nick, v: currentWealth });
   save.best = Math.max(save.best, currentScore);
-  saveData(); await syncCloud();
+  saveData(); await syncCloud(); // cloud is disabled unless BIN_ID/API_KEY provided
   document.getElementById('titleText').innerText = "WASTED";
   document.getElementById('subText').innerText = reason;
   document.getElementById('startScreen').style.display = 'flex';
